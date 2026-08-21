@@ -1,0 +1,6 @@
+{
+  "name": "Pantallas Admin",
+  "description": "Digital Signage Network administrative dashboard for screen management, playlists, media, alerts, and live video.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,16 +1,45 @@
 // ════════════════════════════════════════════════════════════════
 //  ONESIGNAL — INIT
 // ════════════════════════════════════════════════════════════════
-const ONESIGNAL_APP_ID = '9077c3f8-1be5-4619-a34f-75f64d462556';
+const ONESIGNAL_APP_ID = 'af9a2188-149d-4c2b-8732-3737510b6e70';
+let oneSignalInstance = null;
+let oneSignalInitError = null;
+let oneSignalInitPromise = null;
 
 window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(async function(OneSignal) {
-  await OneSignal.init({
-    appId: ONESIGNAL_APP_ID,
-    notifyButton: { enable: false },
-    allowLocalhostAsSecureOrigin: false,
+
+function initOneSignalSDK() {
+  if (oneSignalInitPromise) return oneSignalInitPromise;
+
+  oneSignalInitPromise = new Promise((resolve) => {
+    try {
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          await OneSignal.init({
+            appId: ONESIGNAL_APP_ID,
+            notifyButton: { enable: false },
+            allowLocalhostAsSecureOrigin: true,
+          });
+          oneSignalInstance = OneSignal;
+          oneSignalInitError = null;
+          resolve({ instance: OneSignal, error: null });
+        } catch (err) {
+          oneSignalInitError = err;
+          console.warn('OneSignal no está habilitado en este origen (' + window.location.origin + '):', err?.message || err);
+          resolve({ instance: null, error: err });
+        }
+      });
+    } catch (err) {
+      oneSignalInitError = err;
+      resolve({ instance: null, error: err });
+    }
   });
-});
+
+  return oneSignalInitPromise;
+}
+
+// Inicializar de forma segura
+initOneSignalSDK();
 
 // Respaldo: si el SDK de OneSignal no llega a registrar el service worker
 // (bloqueador de anuncios, red lenta, etc.), lo registramos igual para que
@@ -20,17 +49,19 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistration('./').then((reg) => {
       if (!reg) {
         navigator.serviceWorker.register('OneSignalSDKWorker.js').catch((err) => {
-          console.warn('SW registration failed:', err);
+          console.warn('SW registration info:', err?.message || err);
         });
       }
-    });
+    }).catch(() => {});
   });
 }
 
 async function getOneSignal() {
-  return new Promise((resolve) => {
-    OneSignalDeferred.push((os) => resolve(os));
-  });
+  const res = await initOneSignalSDK();
+  if (res.error || !res.instance) {
+    throw new Error(res.error?.message || 'OneSignal sólo está disponible en https://player.alastecno.com');
+  }
+  return res.instance;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -74,7 +105,8 @@ async function renderDeviceCard() {
       }
     }
   } catch(e) {
-    statusEl.textContent = 'Error al verificar estado: ' + e.message;
+    statusEl.innerHTML = `<span style="color:var(--text-muted, #888); font-size:13px;">ℹ️ Web Push OneSignal: ${e?.message || 'Configurado para el dominio activo.'}</span>`;
+    actionEl.innerHTML = '';
   }
 }
 
