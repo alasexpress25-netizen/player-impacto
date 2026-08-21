@@ -67,7 +67,7 @@ if ('serviceWorker' in navigator) {
 async function getOneSignal() {
   const res = await initOneSignalSDK();
   if (res.error || !res.instance) {
-    throw new Error(res.error?.message || 'OneSignal sólo está disponible en https://player.alastecno.com');
+    throw new Error(res.error?.message || 'OneSignal sólo está disponible en https://alasexpress25-netizen.github.io/player-impacto/');
   }
   return res.instance;
 }
