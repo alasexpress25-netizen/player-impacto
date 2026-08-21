@@ -16,17 +16,20 @@ function initOneSignalSDK() {
       window.OneSignalDeferred.push(async function(OneSignal) {
         try {
           // Calculá la carpeta actual (ej: '/player-impacto/' en GitHub Pages,
-          // o '/' en player.alastecno.com) para que el scope del SW sea correcto
-          // sin necesidad de hardcodear el nombre del repo.
+          // o '/' en player.alastecno.com) para que el SW se pida y controle
+          // la ruta correcta, sin hardcodear el nombre del repo.
           const basePath = window.location.pathname.endsWith('/')
             ? window.location.pathname
             : window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+          // OneSignal necesita la ruta RELATIVA DESDE LA RAÍZ DEL DOMINIO
+          // (sin '/' inicial), incluyendo la carpeta — no solo el nombre del archivo.
+          const swPath = basePath.replace(/^\//, '') + 'OneSignalSDKWorker.js';
 
           await OneSignal.init({
             appId: ONESIGNAL_APP_ID,
             notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
-            serviceWorkerPath: 'OneSignalSDKWorker.js',
+            serviceWorkerPath: swPath,
             serviceWorkerParam: { scope: basePath },
           });
           oneSignalInstance = OneSignal;
