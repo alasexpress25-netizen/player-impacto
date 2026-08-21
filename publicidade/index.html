@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planos — ImpactoTV Mídia</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#020202"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ImpactoTV"/>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+<link rel="icon" href="icons/icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg:         #020202;
+    --card:       #111111;
+    --card2:      #1a1a1a;
+    --accent:     #C9A244;
+    --accent2:    #e8c96a;
+    --accent-dim: rgba(201, 162, 68, 0.12);
+    --red:        #ff5555;
+    --text:       #ffffff;
+    --text2:      #8a8a8a;
+    --border:     rgba(201,162,68,0.15);
+    --r:          16px;
+    --r-sm:       10px;
+    --font-title: 'Cinzel', serif;
+    --font-body:  'Montserrat', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text { font-family: var(--font-title); font-size: 18px; font-weight: 700; letter-spacing: .03em; color: var(--text); text-transform: uppercase; }
+  .logo-text span { color: var(--accent); }
+  .logo-sub  { font-size: 11px; color: var(--text2); margin-top: 2px; letter-spacing: .05em; text-transform: uppercase; }
+
+  .hero { text-align: center; margin: 28px 0 36px; }
+  .hero h1 { font-family: var(--font-title); font-size: 26px; font-weight: 700; letter-spacing: .02em; margin-bottom: 10px; text-transform: uppercase; }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p  { font-size: 14px; color: var(--text2); max-width: 520px; margin: 0 auto; line-height: 1.6; }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 760px) { .plans-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .plan-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 26px 22px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .plan-card.featured {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 12px 32px rgba(201,162,68,0.1);
+  }
+  .plan-badge {
+    position: absolute;
+    top: -11px; left: 22px;
+    background: var(--accent);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .plan-name  { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin-bottom: 10px; }
+  .plan-price { font-size: 34px; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+  .plan-price small { font-size: 14px; font-weight: 500; color: var(--text2); }
+  .plan-period { font-size: 12px; color: var(--text2); margin-bottom: 18px; }
+  .plan-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.7;
+    margin-bottom: 22px;
+    flex: 1;
+  }
+  .plan-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--r-sm);
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .plan-btn:active { transform: scale(0.98); }
+  .plan-card:not(.featured) .plan-btn {
+    background: var(--card2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .loading-center {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 60px 20px; color: var(--text2); font-size: 14px;
+  }
+  .spinner {
+    width: 22px; height: 22px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Modal de formulario ─────────────────────── */
+  #modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  #modal-overlay.active { display: flex; }
+  @media (min-width: 600px) { #modal-overlay { align-items: center; padding: 20px; } }
+  #modal-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 440px;
+    max-height: 92dvh;
+    overflow-y: auto;
+    padding: 26px 24px;
+  }
+  @media (min-width: 600px) { #modal-box { border-radius: 20px; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .modal-title { font-size: 18px; font-weight: 700; }
+  .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+  .modal-close {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--card2); color: var(--text2);
+    border: none; font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 11px; color: var(--text2);
+    margin-bottom: 6px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 14px;
+    outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .modal-error { color: var(--red); font-size: 12px; margin-bottom: 10px; display: none; }
+  .modal-submit {
+    width: 100%;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .modal-submit:disabled { opacity: .5; pointer-events: none; }
+  .modal-note { font-size: 11px; color: var(--text2); text-align: center; margin-top: 12px; line-height: 1.5; }
+
+  .footer-note { text-align: center; font-size: 11px; color: var(--text2); margin-top: 40px; line-height: 1.6; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-row">
+      <div class="logo-icon">🔺</div>
+      <div>
+        <div class="logo-text">Impacto<span>TV</span></div>
+        <div class="logo-sub">Mídia · Publicidade DOOH</div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1>Escolha seu <em>plano</em></h1>
+      <p>Anuncie sua marca nas telas LED em Imbituba e região. Seja visto por milhares de pessoas da sua cidade. Cancele quando quiser.</p>
+    </div>
+
+    <div id="plans-area">
+      <div class="loading-center"><div class="spinner"></div> Carregando planos...</div>
+    </div>
+
+    <div class="footer-note">
+      Pagamento processado de forma segura pelo Mercado Pago.<br>
+      Após o pagamento você será redirecionado para confirmar sua assinatura.
+    </div>
+  </div>
+
+  <!-- Modal formulário -->
+  <div id="modal-overlay">
+    <div id="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Quase lá!</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-sub" id="modal-plan-label"></div>
+
+      <div class="modal-error" id="modal-error"></div>
+
+      <div class="field">
+        <label>Seu nome</label>
+        <input id="f-nombre" placeholder="Ex: Carlos Souza" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Empresa / marca</label>
+        <input id="f-empresa" placeholder="Ex: Auto Peças Imbituba" autocomplete="organization">
+      </div>
+      <div class="field">
+        <label>WhatsApp</label>
+        <input id="f-telefone" placeholder="(48) 99999-9999" autocomplete="tel">
+      </div>
+
+      <button class="modal-submit" id="btn-submit" onclick="submitLead()">
+        Ir para o pagamento →
+      </button>
+      <div class="modal-note">Você será redirecionado ao Mercado Pago para concluir a assinatura.</div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://sdfwredxmyawvolxuifp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkZndyZWR4bXlhd3ZvbHh1aWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MzQ2NzgsImV4cCI6MjA5NTIxMDY3OH0.rzVLfYDRQYk2v7qCVHcBZgJM2nTTKbMfbJ61EHm4HV4';
+const LOCAL_KEY = 'lv_suscripcion_pendiente';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let planesCache = [];
+let planSeleccionado = null;
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function fmtBRL(v) {
+  return Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function cargarPlanes() {
+  const area = document.getElementById('plans-area');
+  const { data, error } = await sb
+    .from('planes')
+    .select('codigo, nombre, precio_brl, descripcion, mp_checkout_url')
+    .eq('activo', true)
+    .order('orden');
+
+  if (error || !data?.length) {
+    area.innerHTML = `<div class="loading-center">Não foi possível carregar os planos agora. Tente novamente em alguns minutos.</div>`;
+    return;
+  }
+
+  planesCache = data;
+
+  area.innerHTML = `<div class="plans-grid">${data.map((p, i) => renderPlanCard(p, i === 1)).join('')}</div>`;
+}
+
+function renderPlanCard(p, destacado) {
+  const beneficios = (p.descripcion || '').split('·').map(b => b.trim()).filter(Boolean);
+  return `
+  <div class="plan-card ${destacado ? 'featured' : ''}">
+    ${destacado ? '<div class="plan-badge">Mais escolhido</div>' : ''}
+    <div class="plan-name">${esc(p.nombre)}</div>
+    <div class="plan-price">R$ ${fmtBRL(p.precio_brl)}<small>/mês</small></div>
+    <div class="plan-period">Cobrança mensal recorrente</div>
+    <div class="plan-desc">
+      ${beneficios.map(b => `✓ ${esc(b)}`).join('<br>')}
+    </div>
+    <button class="plan-btn" onclick="abrirFormulario('${esc(p.codigo)}')">Quero esse plano</button>
+  </div>`;
+}
+
+function abrirFormulario(codigo) {
+  planSeleccionado = planesCache.find(p => p.codigo === codigo);
+  if (!planSeleccionado) return;
+
+  document.getElementById('modal-plan-label').textContent =
+    `Plano ${planSeleccionado.nombre} · R$ ${fmtBRL(planSeleccionado.precio_brl)}/mês — preencha seus dados para continuar.`;
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('f-nombre').value = '';
+  document.getElementById('f-empresa').value = '';
+  document.getElementById('f-telefone').value = '';
+  document.getElementById('modal-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+document.getElementById('modal-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-overlay') closeModal();
+});
+
+function mostrarError(msg) {
+  const el = document.getElementById('modal-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function submitLead() {
+  const nombre   = document.getElementById('f-nombre').value.trim();
+  const empresa  = document.getElementById('f-empresa').value.trim();
+  const telefone = document.getElementById('f-telefone').value.trim();
+  const btn = document.getElementById('btn-submit');
+
+  if (!nombre)   { mostrarError('Informe seu nome.'); return; }
+  if (!telefone) { mostrarError('Informe seu WhatsApp.'); return; }
+  if (!planSeleccionado) { mostrarError('Selecione um plano.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+
+  try {
+    const { data, error } = await sb.rpc('crear_lead_suscripcion', {
+      p_nombre: nombre,
+      p_empresa: empresa,
+      p_telefono: telefone,
+      p_plan_codigo: planSeleccionado.codigo
+    });
+
+    if (error) throw new Error(error.message);
+    if (data?.error) throw new Error('Não foi possível processar. Tente novamente.');
+
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({
+      suscripcion_id: data.suscripcion_id,
+      cliente_id: data.cliente_id,
+      plan: data.plan_codigo,
+      creado_en: Date.now()
+    }));
+
+    window.location.href = data.mp_checkout_url;
+
+  } catch (e) {
+    mostrarError('Erro: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Ir para o pagamento →';
+  }
+}
+
+cargarPlanes();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.warn('SW registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>

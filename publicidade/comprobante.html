@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comprovante de Veiculação — ImpactoTV Mídia</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#020202"/>
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('impactotv_theme');
+      if (!t) t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<link rel="icon" href="icons/icon-192.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg:         #020202;
+    --card:       #111111;
+    --card2:      #1a1a1a;
+    --accent:     #C9A244;
+    --accent2:    #e8c96a;
+    --accent-dim: rgba(201, 162, 68, 0.12);
+    --accent-rgb: 201,162,68;
+    --red:        #ff5555;
+    --text:       #ffffff;
+    --text2:      #8a8a8a;
+    --border:     rgba(201,162,68,0.15);
+    --topbar-bg:  rgba(2,2,2,0.95);
+    --r:          16px;
+    --r-sm:       10px;
+    --header-h:   60px;
+    --font-title: 'Cinzel', serif;
+    --font-body:  'Montserrat', sans-serif;
+  }
+
+  html[data-theme="light"] {
+    --bg:         #f6f5f1;
+    --card:       #ffffff;
+    --card2:      #f0eee7;
+    --accent-dim: rgba(201, 162, 68, 0.16);
+    --text:       #1c1a15;
+    --text2:      #706a5c;
+    --border:     rgba(160, 120, 30, 0.2);
+    --topbar-bg:  rgba(246,245,241,0.92);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color .25s ease, color .25s ease;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  .logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text { font-family: var(--font-title); font-size: 18px; font-weight: 700; letter-spacing: .03em; color: var(--text); text-transform: uppercase; }
+  .logo-text span { color: var(--accent); }
+  .logo-sub  { font-size: 11px; color: var(--text2); margin-top: 2px; letter-spacing: .05em; text-transform: uppercase; }
+
+  .hero {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 24px 22px;
+    margin-bottom: 18px;
+  }
+  .hero-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 6px; }
+  .hero-title { font-family: var(--font-title); font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: .01em; }
+  .hero-sub   { font-size: 13px; color: var(--text2); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  @media (min-width: 560px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 18px 14px;
+    text-align: center;
+  }
+  .stat-num   { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+  .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-top: 6px; font-weight: 600; }
+
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .section-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* Mini gráfico de barras 30 días */
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 90px; margin-top: 6px; }
+  .bar { flex: 1; background: var(--accent-dim); border-radius: 3px 3px 0 0; position: relative; min-height: 2px; transition: background .15s; }
+  .bar:hover { background: var(--accent); }
+  .chart-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text2); margin-top: 6px; }
+
+  .live-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .live-item:last-child { border-bottom: none; }
+  .live-screen { font-weight: 600; }
+  .live-city   { color: var(--text2); font-size: 12px; }
+  .live-time   { color: var(--text2); font-size: 12px; white-space: nowrap; }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    display: inline-block; margin-right: 6px;
+    box-shadow: 0 0 0 0 rgba(var(--accent-rgb),0.5);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(var(--accent-rgb),0.5); }
+    70%  { box-shadow: 0 0 0 6px rgba(var(--accent-rgb),0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb),0); }
+  }
+
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  @media (min-width: 560px) { .video-grid.multi { grid-template-columns: repeat(2, 1fr); } }
+  .video-item { background: var(--card2); border: 1px solid var(--border); border-radius: var(--r-sm); overflow: hidden; }
+  .video-item video {
+    width: 100%;
+    display: block;
+    background: #000;
+    max-height: 360px;
+  }
+  .video-item .video-name {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .empty-state { text-align: center; padding: 30px 10px; color: var(--text2); font-size: 13px; }
+  .footer-note { text-align: center; font-size: 11px; color: var(--text2); margin-top: 24px; line-height: 1.6; }
+
+  .loading, .error-box {
+    text-align: center; padding: 60px 20px; color: var(--text2); font-size: 14px;
+  }
+  .error-box { color: #ff8888; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── Bloqueado por assinatura inativa ─────────── */
+  .blocked-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 36px 24px;
+    text-align: center;
+  }
+  .blocked-icon {
+    width: 60px; height: 60px;
+    background: rgba(255,170,0,0.12);
+    border: 1px solid #ffaa00;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 18px;
+  }
+  .blocked-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+  .blocked-sub { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 22px; max-width: 440px; margin-left: auto; margin-right: auto; }
+  .blocked-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #000;
+    border: none; border-radius: 9px;
+    padding: 12px 22px;
+    font-size: 14px; font-weight: 700;
+    text-decoration: none;
+  }
+
+  /* ─── Navegação: topbar + menu lateral ───────────── */
+  .app-topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+    z-index: 500;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 60px 0 16px;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  .hamburger-btn {
+    display: none;
+    width: 38px; height: 38px; flex-shrink: 0;
+    align-items: center; justify-content: center;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text); font-size: 17px; cursor: pointer;
+  }
+  .topbar-logos { display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; gap: 10px; }
+  .topbar-logo-badge {
+    background: #fff;
+    border-radius: 8px;
+    padding: 4px 9px;
+    height: 34px;
+    display: flex; align-items: center;
+  }
+  .topbar-logo-badge img { height: 100%; width: auto; display: block; object-fit: contain; }
+
+  .theme-toggle-btn {
+    position: fixed; top: 11px; right: 16px; z-index: 700;
+    width: 38px; height: 38px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--card2); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text); font-size: 16px; cursor: pointer;
+    transition: background-color .25s ease, border-color .25s ease;
+  }
+  @media (max-width: 780px) {
+    .topbar-logo-badge { height: 28px; padding: 3px 7px; }
+  }
+
+  .card, .section, .hero, .stat-card, .blocked-box, .video-item, .screen-item,
+  .side-nav, .nav-tile, .sidebar-overlay {
+    transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+  }
+
+  .sidebar-overlay { display: none; }
+
+  .side-nav {
+    position: fixed; top: var(--header-h); bottom: 0; left: 0; width: 220px;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    z-index: 400;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto;
+  }
+  .nav-tile {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 13px; border-radius: 10px;
+    background: var(--card2); border: 1px solid var(--border);
+    color: var(--text2); font-size: 13px; font-weight: 600;
+    cursor: pointer; text-align: left; width: 100%;
+  }
+  .nav-tile:hover { color: var(--text); border-color: rgba(var(--accent-rgb),0.3); }
+  .nav-tile.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  .nav-icon { font-size: 15px; flex-shrink: 0; }
+
+  .content-inner {
+    max-width: 720px; margin: 0 auto;
+    padding: calc(var(--header-h) + 24px) 16px 60px;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  @media (max-width: 780px) {
+    .hamburger-btn { display: flex; }
+    .side-nav {
+      transform: translateX(-110%);
+      transition: transform .25s ease;
+      box-shadow: 0 0 40px rgba(0,0,0,0.6);
+      width: 78%; max-width: 260px;
+    }
+    .side-nav.open { transform: translateX(0); }
+    .sidebar-overlay {
+      display: block; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 390;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+  }
+  @media (min-width: 781px) {
+    .content-inner { margin-left: 220px; max-width: 720px; }
+  }
+
+  /* ─── Banner de instalação (PWA) ─────────────────── */
+  .install-banner {
+    position: fixed; left: 12px; right: 12px; bottom: 12px;
+    z-index: 650;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    animation: install-banner-in .3s ease;
+  }
+  @keyframes install-banner-in {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .install-banner-icon {
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 19px;
+  }
+  .install-banner-text { flex: 1; min-width: 0; }
+  .install-banner-title { font-size: 13px; font-weight: 700; }
+  .install-banner-sub { font-size: 11.5px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+  .install-banner-close {
+    background: none; border: none; color: var(--text2); font-size: 15px; cursor: pointer;
+    padding: 4px; flex-shrink: 0; align-self: flex-start;
+  }
+  @media (min-width: 560px) {
+    .install-banner { max-width: 400px; left: auto; }
+  }
+
+  /* ─── Histórico colapsável ────────────────────────── */
+  #historico-resto.collapsed { display: none; }
+
+  /* ─── Telas do cliente ─────────────────────────── */
+  .screen-item {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .screen-item:last-child { border-bottom: none; }
+  .screen-name { font-weight: 600; font-size: 13px; }
+  .screen-sub  { color: var(--text2); font-size: 12px; margin-top: 2px; }
+  .screen-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .03em;
+  }
+  .badge-on  { background: rgba(80,220,120,0.12); color: #5cd97a; }
+  .badge-off { background: rgba(255,85,85,0.12); color: var(--red); }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .btn-sm2 {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--card2); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 11px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .btn-sm2:disabled { opacity: .4; pointer-events: none; }
+  .btn-sm2.primary { background: var(--accent); color: #000; border: none; }
+
+  /* ─── Bloqueio de recurso por plano ──────────────── */
+  .upsell-box {
+    text-align: center; padding: 22px 14px; color: var(--text2); font-size: 12px; line-height: 1.6;
+  }
+  .upsell-box a { color: var(--accent); font-weight: 700; }
+
+  /* ─── Mensagem promocional ───────────────────────── */
+  .msg-limite { font-size: 12px; color: var(--text2); margin-bottom: 10px; }
+  .msg-limite b { color: var(--accent); }
+  .msg-row { display: flex; gap: 8px; }
+  .msg-row select, .msg-row input {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 10px 12px; font-size: 13px; outline: none;
+  }
+  .msg-row select { flex: 0 0 auto; max-width: 130px; }
+  .msg-row input { flex: 1; min-width: 0; }
+  .msg-feedback { font-size: 12px; margin-top: 8px; display: none; }
+  .msg-feedback.ok  { color: #5cd97a; display: block; }
+  .msg-feedback.err { color: var(--red); display: block; }
+
+  /* ─── Modal player ao vivo ───────────────────────── */
+  #player-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+    z-index: 600; align-items: center; justify-content: center; padding: 16px;
+  }
+  #player-overlay.active { display: flex; }
+  #player-box { width: 100%; max-width: 480px; }
+  #player-box .player-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; color: var(--text); }
+  #player-box .player-header .modal-close {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--card2); color: var(--text2);
+    border: none; font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  #player-stage {
+    width: 100%; aspect-ratio: 9/16; max-height: 70dvh;
+    background: #000; border-radius: var(--r-sm); overflow: hidden;
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  #player-stage img, #player-stage video { width: 100%; height: 100%; object-fit: contain; }
+  #player-note { text-align: center; font-size: 11px; color: var(--text2); margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <button id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar tema claro/escuro" aria-label="Alternar tema claro/escuro">🌙</button>
+  <div id="app">
+    <div class="wrap"><div class="loading"><div class="spinner"></div>Carregando comprovante…</div></div>
+  </div>
+
+  <!-- Modal: player independente (mesmo conteúdo/ordem da tela, não sincronizado ao segundo) -->
+  <div id="player-overlay">
+    <div id="player-box">
+      <div class="player-header">
+        <div id="player-title" style="font-weight:700;font-size:14px;"></div>
+        <button class="modal-close" onclick="closePlayer()">✕</button>
+      </div>
+      <div id="player-stage"><div class="loading"><div class="spinner"></div></div></div>
+      <div id="player-note">Reprodução independente com o mesmo conteúdo e ordem da tela — não é um espelho ao vivo, pode estar em um ponto diferente do vídeo.</div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = 'https://sdfwredxmyawvolxuifp.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkZndyZWR4bXlhd3ZvbHh1aWZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2MzQ2NzgsImV4cCI6MjA5NTIxMDY3OH0.rzVLfYDRQYk2v7qCVHcBZgJM2nTTKbMfbJ61EHm4HV4';
+const PLANES_URL = 'index.html'; // página de planos (index.html) para reativar/assinar
+
+function getToken() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('t') || params.get('token');
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function timeAgo(iso) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `há ${Math.floor(diff/60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff/3600)} h`;
+  return `há ${Math.floor(diff/86400)} d`;
+}
+
+function fmtFecha(iso) {
+  return new Date(iso).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+async function cargarComprobante() {
+  const app = document.getElementById('app');
+  const token = getToken();
+
+  if (!token) {
+    app.innerHTML = `<div class="wrap"><div class="error-box">⚠️ Falta o código de acesso no link.<br>Verifique se sua URL inclui <code>?t=SEU_TOKEN</code>.</div></div>`;
+    return;
+  }
+  CURRENT_TOKEN = token;
+  configurarManifestDinamico(token);
+
+  // Não interromper se o cliente estiver assistindo ao vídeo neste momento
+  const videoEnReproduccion = app.querySelector('video');
+  if (videoEnReproduccion && !videoEnReproduccion.paused) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_comprobante`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({ p_token: token })
+    });
+
+    if (!res.ok) throw new Error('Não foi possível conectar ao servidor.');
+    const data = await res.json();
+
+    if (data.error === 'token_invalido') {
+      renderBloqueado(null, {
+        icon: '⚠️',
+        title: 'Código de acesso inválido',
+        sub: 'O link que você usou não é válido ou o comprovante foi desativado. Se você acredita que isso é um erro, contate-nos. Se você precisa de um novo acesso, pode assinar ou renovar pelo link abaixo.'
+      });
+      return;
+    }
+
+    if (data.error === 'suscripcion_inactiva') {
+      renderBloqueado(data.cliente, {
+        icon: '⏸️',
+        title: null, // é completado com o nome do cliente mais abaixo
+        sub: 'Não encontramos um pagamento ativo associado a esta conta, por isso o comprovante de veiculação não está disponível neste momento. Se você já pagou e acredita que isso é um erro, contate-nos. Se você ainda não assinou ou seu plano venceu, pode fazê-lo pelo link abaixo.'
+      });
+      return;
+    }
+
+    render(data);
+  } catch (e) {
+    app.innerHTML = `<div class="wrap"><div class="error-box">⚠️ Erro ao carregar o comprovante: ${esc(e.message)}</div></div>`;
+  }
+}
+
+function renderBloqueado(cliente, opts) {
+  const app = document.getElementById('app');
+  const nombre = cliente?.empresa || cliente?.nombre || '';
+  const titulo = opts.title || (nombre ? `${esc(nombre)}, sua assinatura não está ativa` : 'Sua assinatura não está ativa');
+
+  app.innerHTML = `
+    <div class="wrap">
+      <div class="topbar-logos" style="margin-bottom: 28px;">
+        <a href="https://lavisualmk.alastecno.com/" target="_blank" rel="noopener" class="topbar-logo-badge" style="display:block;"><img src="LaVisualMk_Logo.jpeg" alt="La Visual MK"></a>
+        <a href="https://impactotv.alastecno.com/" target="_blank" rel="noopener" class="topbar-logo-badge" style="display:block;"><img src="impacto3d_logo_v3.png" alt="Impacto3D"></a>
+      </div>
+
+      <div class="blocked-box">
+        <div class="blocked-icon">${opts.icon}</div>
+        <div class="blocked-title">${titulo}</div>
+        <div class="blocked-sub">${opts.sub}</div>
+        <a class="blocked-btn" href="${PLANES_URL}">Ver planos →</a>
+      </div>
+    </div>
+  `;
+}
+
+const WHATSAPP_NUMERO = '554891981937';
+let CURRENT_TOKEN = null;
+let CURRENT_DATA = null;
+let CURRENT_TAB = 'home';
+let playerTimer = null;
+let deferredInstallPrompt = null;
+let MANIFEST_TOKEN_CONFIGURADO = null;
+
+// ════════════════════════════════════════════════════════════════
+//  PWA: service worker, manifest dinâmico e banner de instalação
+// ════════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+// Gera um manifest.json na hora, com o start_url apontando para o
+// comprovante DESTE cliente (com seu token), assim o app instalado
+// abre direto no comprovante dele e não no painel admin.
+function configurarManifestDinamico(token) {
+  if (!token || MANIFEST_TOKEN_CONFIGURADO === token) return;
+  MANIFEST_TOKEN_CONFIGURADO = token;
+  const manifest = {
+    name: 'Comprovante ImpactoTV',
+    short_name: 'Comprovante',
+    description: 'Comprovante de veiculação — ImpactoTV Mídia',
+    start_url: `comprobante.html?t=${encodeURIComponent(token)}`,
+    scope: './',
+    display: 'standalone',
+    orientation: 'any',
+    background_color: '#020202',
+    theme_color: '#020202',
+    icons: [
+      { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+      { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+    ]
+  };
+  const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: 'application/json' }));
+  let link = document.querySelector('link[rel="manifest"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'manifest';
+    document.head.appendChild(link);
+  }
+  link.setAttribute('href', blobUrl);
+}
+
+const INSTALL_DISMISS_KEY = 'impactotv_install_dispensado_em';
+const INSTALL_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000; // 14 dias
+
+function appJaInstalado() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function ehIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+function foiDispensadoRecentemente() {
+  try {
+    const t = parseInt(localStorage.getItem(INSTALL_DISMISS_KEY) || '0', 10);
+    return (Date.now() - t) < INSTALL_COOLDOWN_MS;
+  } catch (e) { return false; }
+}
+function dispensarInstalar() {
+  document.getElementById('install-banner')?.remove();
+  try { localStorage.setItem(INSTALL_DISMISS_KEY, String(Date.now())); } catch (e) {}
+}
+function mostrarBannerInstalar() {
+  if (appJaInstalado() || foiDispensadoRecentemente()) return;
+  if (document.getElementById('install-banner')) return;
+  if (!deferredInstallPrompt && !ehIOS()) return;
+
+  const el = document.createElement('div');
+  el.id = 'install-banner';
+  el.className = 'install-banner';
+  el.innerHTML = `
+    <div class="install-banner-icon">🔺</div>
+    <div class="install-banner-text">
+      <div class="install-banner-title">Instalar o app do comprovante</div>
+      <div class="install-banner-sub">${ehIOS()
+        ? 'Toque em Compartilhar (□↑) e depois em "Adicionar à Tela de Início".'
+        : 'Acesso rápido, direto da tela inicial do seu celular.'}</div>
+    </div>
+    ${ehIOS() ? '' : '<button class="btn-sm2 primary" onclick="instalarApp()">Instalar</button>'}
+    <button class="install-banner-close" onclick="dispensarInstalar()" aria-label="Fechar">✕</button>
+  `;
+  document.body.appendChild(el);
+}
+async function instalarApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  dispensarInstalar();
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  document.getElementById('install-banner')?.remove();
+});
+
+// ════════════════════════════════════════════════════════════════
+//  TEMA CLARO / ESCURO
+// ════════════════════════════════════════════════════════════════
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const btn = document.getElementById('theme-toggle-btn');
+  if (btn) btn.textContent = theme === 'light' ? '🌙' : '☀️';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', theme === 'light' ? '#f6f5f1' : '#020202');
+  try { localStorage.setItem('impactotv_theme', theme); } catch (e) {}
+}
+function toggleTheme() {
+  const atual = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(atual === 'dark' ? 'light' : 'dark');
+}
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+// ════════════════════════════════════════════════════════════════
+//  NAVEGAÇÃO: menu lateral (hamburguer no mobile)
+// ════════════════════════════════════════════════════════════════
+function setActiveTab(tab) {
+  CURRENT_TAB = tab;
+  document.querySelectorAll('.nav-tile').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === tab));
+  window.scrollTo(0, 0);
+  closeSidebar();
+}
+function toggleSidebar() {
+  document.getElementById('side-nav')?.classList.toggle('open');
+  document.getElementById('sidebar-overlay')?.classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('side-nav')?.classList.remove('open');
+  document.getElementById('sidebar-overlay')?.classList.remove('open');
+}
+function toggleHistorico(qtdResto) {
+  const resto = document.getElementById('historico-resto');
+  const btn = document.getElementById('historico-toggle-btn');
+  if (!resto || !btn) return;
+  const expandido = !resto.classList.contains('collapsed');
+  resto.classList.toggle('collapsed');
+  btn.textContent = expandido ? `Mostrar mais ${qtdResto}` : 'Mostrar menos';
+}
+
+function render(data) {
+  const app = document.getElementById('app');
+  const c = data.conteos;
+  const cliente = data.cliente;
+  const plan = data.plan?.codigo || 'basico';
+  const esPadraoOSuperior = plan === 'padrao' || plan === 'premium';
+  const ePremium = plan === 'premium';
+  const pantallas = data.pantallas || [];
+  const msg = data.mensajes || { limite: 0, usados: 0, restantes: 0 };
+  CURRENT_DATA = data;
+
+  // ── Gráfico de 30 dias ──────────────────────────────
+  const serie = data.serie_diaria_30d || [];
+  const maxCant = Math.max(1, ...serie.map(d => d.cantidad));
+  const mapaDias = {};
+  serie.forEach(d => mapaDias[d.dia] = d.cantidad);
+
+  const dias30 = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    dias30.push({ key, cantidad: mapaDias[key] || 0 });
+  }
+
+  const barsHtml = dias30.map(d => {
+    const h = Math.max(2, Math.round((d.cantidad / maxCant) * 90));
+    return `<div class="bar" style="height:${h}px" title="${d.key}: ${d.cantidad} reproduções"></div>`;
+  }).join('');
+
+  // ── Histórico detalhado por tela (só Premium) — mostra só a ativa + 3 ──
+  const ultimas = data.ultimas_reproducciones || [];
+  const HIST_VISIVEL = 4;
+  const itemHistHtml = (r, i) => `
+    <div class="live-item">
+      <div>
+        ${i === 0 ? '<span class="live-dot"></span>' : ''}
+        <span class="live-screen">${esc(r.pantalla)}</span>
+        ${r.ciudad ? `<span class="live-city"> · ${esc(r.ciudad)}</span>` : ''}
+      </div>
+      <span class="live-time">${timeAgo(r.played_at)}</span>
+    </div>
+  `;
+  const histPrimeiros = ultimas.slice(0, HIST_VISIVEL);
+  const histResto = ultimas.slice(HIST_VISIVEL);
+  const liveHtml = ultimas.length
+    ? `
+      <div id="historico-visivel">${histPrimeiros.map((r, i) => itemHistHtml(r, i)).join('')}</div>
+      ${histResto.length ? `
+        <div id="historico-resto" class="collapsed">${histResto.map((r, i) => itemHistHtml(r, i + HIST_VISIVEL)).join('')}</div>
+        <button class="btn-sm2" id="historico-toggle-btn" style="margin-top:10px;width:100%;justify-content:center;" onclick="toggleHistorico(${histResto.length})">Mostrar mais ${histResto.length}</button>
+      ` : ''}
+    `
+    : `<div class="empty-state">Ainda não há reproduções registradas.</div>`;
+
+  // ── Vídeos do anúncio ──────────────────────────────
+  const videos = (data.anuncios || []).filter(a => a.tipo === 'video' && a.url);
+  const videoSectionHtml = videos.length ? `
+    <div class="section">
+      <div class="section-title">🎬 Seu anúncio</div>
+      <div class="video-grid ${videos.length > 1 ? 'multi' : ''}">
+        ${videos.map(v => `
+          <div class="video-item">
+            <video controls preload="metadata" src="${esc(v.url)}"></video>
+            <div class="video-name">${esc(v.nombre)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  // ── Suas telas — status (aba Métricas, sem ação) ───
+  const pantallasHtml = pantallas.length ? pantallas.map(p => `
+    <div class="screen-item">
+      <div>
+        <div class="screen-name">${esc(p.nombre)}</div>
+        <div class="screen-sub">${p.ciudad ? esc(p.ciudad) + ' · ' : ''}${p.media_actual ? 'Tocando: ' + esc(p.media_actual) : 'Sem info do que está tocando'}</div>
+      </div>
+      <div class="screen-actions">
+        <span class="badge ${p.online ? 'badge-on' : 'badge-off'}"><span class="dot"></span>${p.online ? 'No ar' : 'Fora do ar'}</span>
+      </div>
+    </div>
+  `).join('') : `<div class="empty-state">Nenhuma tela vinculada à sua conta ainda. Fale com a gente.</div>`;
+
+  // ── Suas telas — assistir (aba Vídeo ao Vivo, só Padrão+) ─
+  const pantallasAoVivoHtml = pantallas.length ? pantallas.map(p => `
+    <div class="screen-item">
+      <div>
+        <div class="screen-name">${esc(p.nombre)}</div>
+        <div class="screen-sub">${p.ciudad ? esc(p.ciudad) + ' · ' : ''}${p.media_actual ? 'Tocando: ' + esc(p.media_actual) : 'Sem info do que está tocando'}</div>
+      </div>
+      <div class="screen-actions">
+        <span class="badge ${p.online ? 'badge-on' : 'badge-off'}"><span class="dot"></span>${p.online ? 'No ar' : 'Fora do ar'}</span>
+        <button class="btn-sm2 primary" onclick="abrirPlayer('${p.id}','${esc(p.nombre)}')">▶ Ao vivo</button>
+      </div>
+    </div>
+  `).join('') : `<div class="empty-state">Nenhuma tela vinculada à sua conta ainda. Fale com a gente.</div>`;
+
+  const liveTabHtml = esPadraoOSuperior ? `
+    <div class="section">
+      <div class="section-title">📡 Assistir suas telas</div>
+      ${pantallasAoVivoHtml}
+    </div>
+  ` : `
+    <div class="section">
+      <div class="upsell-box">▶ A visualização ao vivo das suas telas está disponível a partir do plano Padrão. <a href="${PLANES_URL}">Ver planos →</a></div>
+    </div>
+  `;
+
+  const historicoSectionHtml = ePremium ? `
+    <div class="section">
+      <div class="section-title">📈 Últimos 30 dias</div>
+      <div class="chart">${barsHtml}</div>
+      <div class="chart-labels"><span>${dias30[0].key.slice(5)}</span><span>${dias30[dias30.length-1].key.slice(5)}</span></div>
+    </div>
+    <div class="section">
+      <div class="section-title">🕐 Histórico de reproduções</div>
+      ${liveHtml}
+    </div>
+  ` : '';
+
+  // ── Relatório mensal em PDF (só Premium) ───────────
+  const relatorioSectionHtml = ePremium ? `
+    <div class="section">
+      <div class="section-title">📄 Relatório mensal</div>
+      <div id="relatorio-box"><span class="msg-limite">Carregando…</span></div>
+    </div>
+  ` : '';
+
+  // ── Mensagem promocional (Padrão/Premium) ──────────
+  const mensagemSectionHtml = esPadraoOSuperior ? `
+    <div class="section" id="msg-section">
+      <div class="section-title">📢 Enviar mensagem promocional</div>
+      <div class="msg-limite">Você já usou <b>${msg.usados}</b> de <b>${msg.limite}</b> mensagens este mês.</div>
+      ${msg.restantes > 0 ? `
+        <div class="msg-row">
+          <select id="msg-screen">
+            ${pantallas.map(p => `<option value="${p.id}">${esc(p.nombre)}</option>`).join('')}
+          </select>
+          <input id="msg-text" maxlength="80" placeholder="Ex: Promoção hoje!">
+        </div>
+        <button class="btn-sm2 primary" style="margin-top:8px;width:100%;justify-content:center;" onclick="enviarMensagem()">Enviar mensagem</button>
+      ` : `<div class="empty-state">Limite mensal atingido. Volta no próximo mês, ou fala com a gente pra fazer upgrade de plano.</div>`}
+      <div class="msg-feedback" id="msg-feedback"></div>
+    </div>
+  ` : `
+    <div class="section">
+      <div class="upsell-box">📢 Mensagem promocional e ▶ visualização ao vivo estão disponíveis a partir do plano Padrão. <a href="${PLANES_URL}">Ver planos →</a></div>
+    </div>
+  `;
+
+  const whatsappPrioritarioHtml = ePremium && WHATSAPP_NUMERO ? `
+    <a class="btn-sm2 primary" style="width:100%;justify-content:center;margin-top:10px;"
+       target="_blank"
+       href="https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent('Olá! Sou cliente Premium (' + (cliente.empresa || cliente.nombre) + ') e preciso de atendimento prioritário.')}">
+      💬 Fale com seu gerente de conta (prioritário)
+    </a>
+  ` : '';
+
+  const videosTabHtml = videoSectionHtml || `<div class="section"><div class="empty-state">Nenhum vídeo de anúncio disponível ainda.</div></div>`;
+
+  app.innerHTML = `
+    <div class="app-topbar">
+      <button class="hamburger-btn" id="hamburger-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-logos">
+        <a href="https://lavisualmk.alastecno.com/" target="_blank" rel="noopener" class="topbar-logo-badge" style="display:block;"><img src="LaVisualMk_Logo.jpeg" alt="La Visual MK"></a>
+        <a href="https://impactotv.alastecno.com/" target="_blank" rel="noopener" class="topbar-logo-badge" style="display:block;"><img src="impacto3d_logo_v3.png" alt="Impacto3D"></a>
+      </div>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+    <nav class="side-nav" id="side-nav">
+      <button class="nav-tile" data-tab="home" onclick="setActiveTab('home')"><span class="nav-icon">🏠</span> Home</button>
+      <button class="nav-tile" data-tab="videos" onclick="setActiveTab('videos')"><span class="nav-icon">🎬</span> Seus Vídeos</button>
+      <button class="nav-tile" data-tab="live" onclick="setActiveTab('live')"><span class="nav-icon">📡</span> Vídeo ao Vivo</button>
+      <button class="nav-tile" data-tab="metrics" onclick="setActiveTab('metrics')"><span class="nav-icon">📊</span> Métricas</button>
+    </nav>
+
+    <div class="content-inner">
+      <div class="hero">
+        <div class="hero-label">Comprovante de veiculação · Plano ${esc(data.plan?.nombre || '')}</div>
+        <div class="hero-title">${esc(cliente.empresa || cliente.nombre)}</div>
+        <div class="hero-sub">${data.anuncios.length} anúncio(s) ativo(s) em acompanhamento</div>
+      </div>
+
+      <div class="tab-panel" data-panel="home">
+        ${relatorioSectionHtml}
+        ${mensagemSectionHtml}
+      </div>
+
+      <div class="tab-panel" data-panel="videos">
+        ${videosTabHtml}
+      </div>
+
+      <div class="tab-panel" data-panel="live">
+        ${liveTabHtml}
+      </div>
+
+      <div class="tab-panel" data-panel="metrics">
+        <div class="grid">
+          <div class="stat-card"><div class="stat-num">${c.hoy}</div><div class="stat-label">Hoje</div></div>
+          <div class="stat-card"><div class="stat-num">${c.semana}</div><div class="stat-label">Esta semana</div></div>
+          <div class="stat-card"><div class="stat-num">${c.mes}</div><div class="stat-label">Este mês</div></div>
+          <div class="stat-card"><div class="stat-num">${c.anio}</div><div class="stat-label">Este ano</div></div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">📺 Suas telas</div>
+          ${pantallasHtml}
+          ${whatsappPrioritarioHtml}
+        </div>
+
+        ${historicoSectionHtml}
+      </div>
+
+      <div class="footer-note">
+        Total histórico: ${c.total} exibições registradas.<br>
+        Este comprovante é atualizado a cada 8 h aproximadamente e tem caráter informativo,
+        conforme as condições do contrato vigente.
+      </div>
+    </div>
+  `;
+
+  setActiveTab(CURRENT_TAB);
+  if (ePremium) carregarRelatorio();
+  setTimeout(mostrarBannerInstalar, 2500);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MENSAGEM PROMOCIONAL
+// ════════════════════════════════════════════════════════════════
+async function enviarMensagem() {
+  const screenId = document.getElementById('msg-screen')?.value;
+  const texto = (document.getElementById('msg-text')?.value || '').trim();
+  const fb = document.getElementById('msg-feedback');
+  fb.className = 'msg-feedback'; fb.textContent = '';
+
+  if (!texto) { fb.className = 'msg-feedback err'; fb.textContent = 'Escreva uma mensagem primeiro.'; return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/enviar_mensaje_cliente`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ p_token: CURRENT_TOKEN, p_screen_id: screenId, p_texto: texto })
+    });
+    const data = await res.json();
+
+    if (data?.error === 'limite_alcanzado') { fb.className = 'msg-feedback err'; fb.textContent = 'Limite mensal atingido.'; return; }
+    if (data?.error) { fb.className = 'msg-feedback err'; fb.textContent = 'Não foi possível enviar. Tente novamente.'; return; }
+
+    fb.className = 'msg-feedback ok'; fb.textContent = `Mensagem enviada ✓ (${data.mensagens_restantes} restantes este mês)`;
+    setTimeout(cargarComprobante, 1500);
+  } catch (e) {
+    fb.className = 'msg-feedback err'; fb.textContent = 'Erro de conexão. Tente novamente.';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RELATÓRIO MENSAL (PDF, client-side, sob demanda — só Premium)
+// ════════════════════════════════════════════════════════════════
+let RELATORIO_DATA = null;
+
+function nomeMesAno(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1, 1);
+  const nome = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+
+async function carregarRelatorio() {
+  const box = document.getElementById('relatorio-box');
+  if (!box) return;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_reporte_mensual_cliente`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ p_token: CURRENT_TOKEN })
+    });
+    const data = await res.json();
+
+    if (data?.error === 'nao_elegivel') {
+      box.innerHTML = `
+        <button class="btn-sm2" disabled>⬇ Baixar relatório de ${esc(nomeMesAno(data.mes_referencia))}</button>
+        <div class="msg-limite" style="margin-top:8px;">Disponível quando sua assinatura estiver ativa durante um mês completo.</div>
+      `;
+      return;
+    }
+    if (data?.error) {
+      box.innerHTML = `<div class="empty-state">Relatório indisponível no momento.</div>`;
+      return;
+    }
+
+    RELATORIO_DATA = data;
+    box.innerHTML = `<button class="btn-sm2 primary" onclick="gerarRelatorioPDF()">⬇ Baixar relatório de ${esc(nomeMesAno(data.mes_referencia))}</button>`;
+  } catch (e) {
+    box.innerHTML = `<div class="empty-state">Erro ao carregar o relatório.</div>`;
+  }
+}
+
+function gerarRelatorioPDF() {
+  if (!RELATORIO_DATA || !window.jspdf) return;
+  const d = RELATORIO_DATA;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const mesNome = nomeMesAno(d.mes_referencia);
+  const margin = 15;
+  let y = 20;
+  const nomeCliente = d.cliente.empresa || d.cliente.nombre;
+
+  const addRodape = () => {
+    const total = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(140);
+      doc.text(`ImpactoTV Mídia · Publicidade DOOH · Relatório gerado em ${new Date().toLocaleString('pt-BR')}`, margin, 290);
+      doc.setTextColor(0);
+    }
+  };
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+  doc.text('Relatório Mensal de Veiculação', margin, y); y += 7;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(`${nomeCliente} · ${mesNome}`, margin, y); y += 10;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Resumo executivo', margin, y); y += 7;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(`Total de exibições no mês: ${d.resumo.total}`, margin, y); y += 6;
+  const variacaoTxt = d.resumo.variacao_pct === null
+    ? 'Sem dados do mês anterior para comparação.'
+    : `Variação vs mês anterior: ${d.resumo.variacao_pct > 0 ? '+' : ''}${d.resumo.variacao_pct}% (mês anterior: ${d.resumo.total_mes_anterior} exibições)`;
+  doc.text(variacaoTxt, margin, y); y += 10;
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Desempenho por tela', margin, y); y += 4;
+  if (d.por_pantalla.length) {
+    doc.autoTable({
+      startY: y, margin: { left: margin, right: margin },
+      head: [['Tela', 'Cidade', 'Exibições']],
+      body: d.por_pantalla.map(p => [p.pantalla, p.ciudad || '-', String(p.cantidad)]),
+      styles: { fontSize: 10 }, headStyles: { fillColor: [201, 162, 68] }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  } else {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Nenhuma exibição registrada neste mês.', margin, y); y += 10;
+  }
+
+  if (y > 240) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Horários de maior audiência', margin, y); y += 4;
+  if (d.por_hora.length) {
+    doc.autoTable({
+      startY: y, margin: { left: margin, right: margin },
+      head: [['Horário', 'Exibições']],
+      body: d.por_hora.map(h => [`${String(h.hora).padStart(2,'0')}h`, String(h.cantidad)]),
+      styles: { fontSize: 10 }, headStyles: { fillColor: [201, 162, 68] }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  } else {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Sem dados de horário neste mês.', margin, y); y += 10;
+  }
+
+  if (y > 240) { doc.addPage(); y = 20; }
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text('Mensagens promocionais enviadas', margin, y); y += 4;
+  if (d.mensagens_enviadas.length) {
+    doc.autoTable({
+      startY: y, margin: { left: margin, right: margin },
+      head: [['Data', 'Tela', 'Mensagem']],
+      body: d.mensagens_enviadas.map(m => [fmtFecha(m.data), m.pantalla, m.texto]),
+      styles: { fontSize: 10 }, headStyles: { fillColor: [201, 162, 68] }
+    });
+  } else {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Nenhuma mensagem promocional enviada neste mês.', margin, y);
+  }
+
+  addRodape();
+
+  const nomeArquivo = `relatorio-${d.mes_referencia}-${nomeCliente.replace(/\s+/g, '_')}.pdf`;
+  doc.save(nomeArquivo);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PLAYER INDEPENDENTE (mesmo conteúdo/ordem, não sincronizado ao segundo)
+// ════════════════════════════════════════════════════════════════
+async function abrirPlayer(screenId, nombre) {
+  document.getElementById('player-title').textContent = '▶ ' + nombre;
+  document.getElementById('player-overlay').classList.add('active');
+  const stage = document.getElementById('player-stage');
+  stage.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_pantalla_playlist_publica`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ p_token: CURRENT_TOKEN, p_screen_id: screenId })
+    });
+    const data = await res.json();
+
+    if (data?.error || !data?.items?.length) {
+      stage.innerHTML = `<div class="empty-state" style="color:var(--text2);">Sem conteúdo disponível para reproduzir agora.</div>`;
+      return;
+    }
+    iniciarLoop(stage, data.items, 0);
+  } catch (e) {
+    stage.innerHTML = `<div class="empty-state" style="color:var(--text2);">Erro ao carregar a programação.</div>`;
+  }
+}
+
+function iniciarLoop(stage, items, idx) {
+  clearTimeout(playerTimer);
+  if (!document.getElementById('player-overlay').classList.contains('active')) return;
+
+  const item = items[idx % items.length];
+  const next = () => iniciarLoop(stage, items, idx + 1);
+
+  if (item.tipo === 'imagen') {
+    stage.innerHTML = `<img src="${esc(item.url)}">`;
+    playerTimer = setTimeout(next, (item.duracion || 10) * 1000);
+  } else {
+    stage.innerHTML = `<video autoplay muted playsinline src="${esc(item.url)}"></video>`;
+    const v = stage.querySelector('video');
+    v.onended = next;
+    v.onerror = next;
+  }
+}
+
+function closePlayer() {
+  document.getElementById('player-overlay').classList.remove('active');
+  clearTimeout(playerTimer);
+  const v = document.querySelector('#player-stage video');
+  if (v) v.pause();
+}
+document.getElementById('player-overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'player-overlay') closePlayer();
+});
+
+cargarComprobante();
+setInterval(cargarComprobante, 28800000); // atualiza a cada 8 horas
+</script>
+</body>
+</html>
