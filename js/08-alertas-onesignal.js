@@ -15,10 +15,18 @@ function initOneSignalSDK() {
     try {
       window.OneSignalDeferred.push(async function(OneSignal) {
         try {
+          // Detectar subcarpeta si estamos en GitHub Pages (/player-impacto/) o en la raíz
+          const isGitHubPages = window.location.pathname.includes('/player-impacto');
+          const swPath = isGitHubPages ? '/player-impacto/OneSignalSDKWorker.js' : 'OneSignalSDKWorker.js';
+          const swParam = isGitHubPages ? { scope: '/player-impacto/' } : undefined;
+
           await OneSignal.init({
             appId: ONESIGNAL_APP_ID,
             notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
+            serviceWorkerPath: swPath,
+            serviceWorkerParam: swParam,
+            path: swPath,
           });
           oneSignalInstance = OneSignal;
           oneSignalInitError = null;
