@@ -106,3 +106,4 @@ async function handleLogout() {
   await sb.auth.signOut();
   showScreen('login');
 }
+
