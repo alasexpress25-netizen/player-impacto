@@ -1,0 +1,40 @@
+📋 Especificaciones Técnicas y Normas de Contenido - DS Player (Impacto 3D)
+Para garantizar la mejor calidad visual y el correcto funcionamiento en nuestra red de pantallas inteligentes, todo material publicitario deberá cumplir con los siguientes requisitos:
+1. Especificaciones Técnicas (Indispensable)
+•
+Relación de Aspecto: 16:9 (Horizontal/Widescreen).
+•
+Resolución Recomendada: 1920 x 1080 px (Full HD).
+•
+Resolución Mínima: 1280 x 720 px (HD).
+•
+Formato de Archivo: MP4 (Codificación H.264 / AVC).
+•
+Peso Máximo: Se recomienda no exceder los 150MB por minuto de video para garantizar una descarga fluida.
+•
+Duración: Según el plan contratado (Recomendado: clips de 15, 30 o 60 segundos).
+2. Recomendaciones de Diseño (Digital Signage)
+•
+Zona Segura: Evite colocar información crítica (precios, teléfonos) en los bordes extremos de la pantalla.
+•
+Legibilidad: Use tipografías grandes y con alto contraste sobre el fondo. Recuerde que el espectador suele estar a varios metros de la pantalla.
+•
+Sin Audio: Nuestras pantallas están optimizadas para impacto visual. El contenido debe entenderse perfectamente sin necesidad de sonido.
+3. Normas de Contenido y Conducta
+El cliente es el único responsable legal del material entregado. Está estrictamente prohibido:
+•
+Uso de vocabulario soez, términos ofensivos o discriminatorios.
+•
+Contenido que incite a la violencia o actividades ilegales.
+•
+Material que vulnere derechos de autor o propiedad intelectual de terceros.
+•
+Publicidad engañosa o que atente contra la moral y las buenas costumbres.
+4. Deslinde de Responsabilidad (Aviso Legal)
+Impacto 3D actúa únicamente como proveedor de la plataforma tecnológica de difusión (Hardware y Software).
+1.
+Responsabilidad: Impacto 3D no se hace responsable por las opiniones, textos, imágenes o videos proporcionados por el cliente.
+2.
+Indemnidad: El cliente garantiza que posee todos los derechos sobre el contenido y mantendrá a Impacto 3D indemne ante cualquier reclamo judicial o extrajudicial derivado del mismo.
+3.
+Derecho de Reserva: Impacto 3D se reserva el derecho de dar de baja cualquier contenido que considere inapropiado o que viole las normas aquí descritas sin previo aviso.

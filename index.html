@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pantallas Admin</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#020202"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Pantallas"/>
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"/>
+  <link rel="icon" href="icons/icon-192.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- jsQR — lector de QR sin dependencias -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- OneSignal Web Push SDK -->
+  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- ─── SCREEN: CONFIG ──────────────────────────────────────── -->
+<div id="screen-config" class="screen">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">📺</div>
+        <div>
+          <div class="auth-logo-text">Pantallas Admin</div>
+          <div class="auth-logo-sub">Digital Signage Network</div>
+        </div>
+      </div>
+      <div class="auth-title">Configurar conexión</div>
+      <div class="auth-sub">Ingresá los datos de tu proyecto Supabase. Los podés encontrar en <strong>Settings → API</strong>.</div>
+
+      <div class="field">
+        <label>Supabase URL</label>
+        <input id="cfg-url" type="url" placeholder="https://xxxxxxxx.supabase.co">
+      </div>
+      <div class="field">
+        <label>Anon Key (pública)</label>
+        <input id="cfg-key" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI...">
+      </div>
+
+      <button class="btn btn-primary" onclick="handleConfigSave()">Conectar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SCREEN: LOGIN ───────────────────────────────────────── -->
+<div id="screen-login" class="screen">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <div class="auth-logo">
+        <div class="auth-logo-icon">📺</div>
+        <div>
+          <div class="auth-logo-text">Pantallas Admin</div>
+          <div class="auth-logo-sub">Digital Signage Network</div>
+        </div>
+      </div>
+      <div class="auth-title">Iniciar sesión</div>
+      <div class="auth-sub">Ingresá con tu cuenta de Supabase Authentication.</div>
+
+      <div class="field">
+        <label>Email</label>
+        <input id="login-email" type="email" placeholder="admin@tuempresa.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter') handleLogin()">
+      </div>
+
+      <button class="btn btn-primary" id="btn-login" onclick="handleLogin()">Ingresar →</button>
+      <button class="btn-link-sm" onclick="showScreen('config')">← Cambiar configuración Supabase</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SCREEN: APP ─────────────────────────────────────────── -->
+<div id="screen-app" class="screen">
+
+  <!-- Topbar -->
+  <div id="app-header">
+    <div class="topbar-left">
+      <div class="header-logo">
+        <div class="header-logo-icon">🔺</div>
+        <div class="header-logo-text">Pantallas Admin</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="header-user" id="header-user-email"></div>
+      <button class="btn-logout" onclick="handleLogout()">Salir</button>
+    </div>
+  </div>
+
+  <!-- Sidebar (siempre visible) -->
+  <div class="sidebar" id="sidebar">
+    <!-- Gráficos personalizados representando cada sección -->
+    <div class="side-graphics" id="side-graphics">
+      <button class="side-graphic-tile active" data-tab="dashboard" onclick="setActiveTab('dashboard')" title="Pantallas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span class="side-graphic-label">Pantallas</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="media" onclick="setActiveTab('media')" title="Media">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polygon points="10 8 16 12 10 16"></polygon>
+        </svg>
+        <span class="side-graphic-label">Media</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="playlists" onclick="setActiveTab('playlists')" title="Playlists">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <span class="side-graphic-label">Playlists</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="alertas" onclick="setActiveTab('alertas')" title="Alertas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="side-graphic-label">Alertas</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="capturas" onclick="setActiveTab('capturas')" title="Capturas">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8h2.5L8 5.5h8L17.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path>
+          <circle cx="12" cy="13.5" r="3.5"></circle>
+        </svg>
+        <span class="side-graphic-label">Capturas</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="videovivo" onclick="setActiveTab('videovivo')" title="Video en vivo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="13" rx="2"></rect>
+          <path d="M10 8.3v6.4l5.2-3.2z" fill="currentColor" stroke="none"></path>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span class="side-graphic-label">Video en vivo</span>
+      </button>
+      <button class="side-graphic-tile" data-tab="videoprioritario" onclick="setActiveTab('videoprioritario')" title="Video Prioritario">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8h2.5L8 5.5h8L17.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path>
+          <circle cx="12" cy="13.5" r="3.2"></circle>
+          <path d="M13 2.5l-2.6 4.4h2.2L11 10.5" fill="currentColor" stroke="none"></path>
+        </svg>
+        <span class="side-graphic-label">Video Prioritario</span>
+      </button>
+      <button class="side-graphic-tile side-action-tile action-install" onclick="openDeployModal('install')" title="Instalar en TV">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="13" height="9" rx="1.4"></rect>
+          <line x1="5.5" y1="16.2" x2="11.5" y2="16.2"></line>
+          <path d="M19 6v9"></path>
+          <path d="M15.5 12l3.5 3.5L22.5 12"></path>
+        </svg>
+        <span class="side-graphic-label">Instalar en TV</span>
+      </button>
+      <button class="side-graphic-tile side-action-tile action-uninstall" onclick="openDeployModal('uninstall')" title="Desinstalar de TV">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1.5" y="4" width="13" height="9" rx="1.4"></rect>
+          <line x1="5" y1="16.2" x2="11" y2="16.2"></line>
+          <path d="M17 9h6"></path>
+          <path d="M18 9v7a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V9"></path>
+          <path d="M19.5 6.5v1.5"></path>
+          <path d="M22.5 6.5v1.5"></path>
+          <path d="M17.7 6.5h4.6"></path>
+        </svg>
+        <span class="side-graphic-label">Desinstalar de TV</span>
+      </button>
+      <button class="side-graphic-tile side-action-tile sidebar-hide-tile" onclick="toggleSidebarMobile(true)" title="Ocultar menú" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+        <span class="side-graphic-label">Ocultar menú</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Badge dorado para reabrir el menú lateral en móvil (visible solo cuando está oculto) -->
+  <button class="sidebar-reopen-badge" id="sidebar-reopen-badge" onclick="toggleSidebarMobile(false)" title="Mostrar menú">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
+
+  <!-- Content -->
+  <div id="app-content">
+
+    <!-- ── Tab: Dashboard ─────────────────────────────────── -->
+    <div id="tab-dashboard" class="tab-panel active">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📊 Pantallas</div>
+          <div class="section-sub" id="dashboard-last-update">Actualizando...</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-outline btn-sm" onclick="showRegisterScreenModal()">+ Registrar</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">↻ Actualizar</button>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-num c-blue" id="sum-total">–</div>
+          <div class="summary-lbl">Total</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-num c-green" id="sum-online">–</div>
+          <div class="summary-lbl">Online</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-num c-red" id="sum-offline">–</div>
+          <div class="summary-lbl">Offline</div>
+        </div>
+      </div>
+
+      <div id="screens-list"></div>
+    </div>
+
+    <!-- ── Tab: Media ─────────────────────────────────────── -->
+    <div id="tab-media" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🎬 Media</div>
+          <div class="section-sub" id="media-count">Cargando...</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="syncExternalFiles()">↻ Sincronizar R2</button>
+      </div>
+
+      <!-- Upload zone -->
+      <div class="upload-zone" id="upload-zone"
+           ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <input type="file" id="file-input" accept="video/mp4,video/webm,image/jpeg,image/jpg,image/png,image/gif,image/webp"
+               multiple onchange="handleFileSelect(this.files)">
+        <div class="upload-icon">☁️</div>
+        <div class="upload-text">Subir video o imagen</div>
+        <div class="upload-types">MP4, WebM · JPG, PNG, GIF, WebP · Carga resumible para archivos grandes</div>
+      </div>
+
+      <!-- Progress area -->
+      <div id="upload-progress-area"></div>
+
+      <!-- Media grid -->
+      <div id="media-grid" class="media-grid"></div>
+    </div>
+
+    <!-- ── Tab: Playlists ─────────────────────────────────── -->
+    <div id="tab-playlists" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📋 Playlists</div>
+          <div class="section-sub">Manejá el contenido de cada pantalla</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="showCreatePlaylistModal()">+ Nueva</button>
+      </div>
+
+      <div id="playlists-list"></div>
+    </div>
+
+    <!-- ── Tab: Alertas ───────────────────────────────────── -->
+    <div id="tab-alertas" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🔔 Alertas</div>
+          <div class="section-sub">Notificaciones push de pantallas</div>
+        </div>
+      </div>
+
+      <!-- Estado de suscripción de este dispositivo -->
+      <div class="card" id="alert-device-card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Este dispositivo</div>
+            <div class="card-sub" id="alert-device-status">Verificando estado...</div>
+          </div>
+          <div id="alert-device-action"></div>
+        </div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">
+          Activá las notificaciones para recibir alertas cuando una pantalla se desconecta o vuelve en línea.
+        </p>
+      </div>
+
+      <!-- Suscriptores registrados -->
+      <div class="section-header" style="margin-top:20px;">
+        <div>
+          <div class="section-title" style="font-size:15px;">👥 Dispositivos suscritos</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAlertas()">↻</button>
+      </div>
+      <div id="alertas-subs-list">
+        <div class="loading-center"><div class="spinner"></div> Cargando...</div>
+      </div>
+
+      <!-- Log de alertas recientes -->
+      <div class="section-header" style="margin-top:20px;">
+        <div>
+          <div class="section-title" style="font-size:15px;">📋 Alertas recientes</div>
+        </div>
+      </div>
+      <div id="alertas-log-list">
+        <div class="loading-center"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div>
+
+
+
+    <!-- ── Tab: Capturas ─────────────────────────────────────── -->
+    <div id="tab-capturas" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">📷 Capturas</div>
+          <div class="section-sub">Última captura remota de cada pantalla</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCapturas()">↻ Actualizar</button>
+      </div>
+     <div id="capturas-grid" class="capturas-grid">
+        <div class="loading-center"><div class="spinner"></div> Cargando capturas...</div>
+      </div>
+    </div><!-- /tab-capturas -->
+
+    <!-- ── Tab: Video en vivo ─────────────────────────────── -->
+    <div id="tab-videovivo" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">▶ Video en vivo</div>
+          <div class="section-sub">Reproducción independiente de cada pantalla — mismo contenido y orden de la playlist activa, no sincronizado al segundo</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadVideoVivo()">↻ Actualizar</button>
+      </div>
+      <div id="vivo-grid" class="capturas-grid">
+        <div class="loading-center"><div class="spinner"></div> Cargando pantallas...</div>
+      </div>
+    </div><!-- /tab-videovivo -->
+
+    <!-- ── Tab: Video Prioritario ─────────────────────────── -->
+    <div id="tab-videoprioritario" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">⚡ Video Prioritario</div>
+          <div class="section-sub">Filmá algo puntual, componelo con el fondo de una playlist y publicalo al instante en una pantalla</div>
+        </div>
+      </div>
+
+      <!-- Paso 1: subida de clips filmados -->
+      <div class="vp-step" id="vp-step-1">
+        <div class="vp-step-title"><span class="vp-step-num">1</span> Subí el material filmado</div>
+        <div class="upload-zone" id="vp-upload-zone"
+             ondragover="vpHandleDragOver(event)" ondragleave="vpHandleDragLeave(event)" ondrop="vpHandleDrop(event)"
+             onclick="document.getElementById('vp-clips-input').click()">
+          <input type="file" id="vp-clips-input" accept="video/*" multiple style="display:none" onchange="vpHandleFileSelect(this.files)">
+          <div class="upload-zone-text">🎥 Arrastrá tus clips acá o hacé clic para elegirlos</div>
+          <div class="upload-zone-sub">Podés subir uno o varios — se concatenan en el orden que los subís</div>
+        </div>
+        <div id="vp-upload-progress-area"></div>
+        <div id="vp-clips-list" class="vp-clip-list"></div>
+      </div>
+
+      <!-- Paso 2: playlist de fondo + texto -->
+      <div class="vp-step" id="vp-step-2">
+        <div class="vp-step-title"><span class="vp-step-num">2</span> Elegí la playlist de fondo/publicidad</div>
+        <div class="field">
+          <label>Playlist de fondo</label>
+          <select id="vp-playlist-select">
+            <option value="">Cargando playlists...</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Texto superpuesto (opcional)</label>
+          <input id="vp-texto-overlay" maxlength="80" placeholder="Ej: Clube Atlético Imbituba — ao vivo">
+        </div>
+      </div>
+
+      <!-- Paso 3: generar + estado -->
+      <div class="vp-step" id="vp-step-3">
+        <div class="vp-step-title"><span class="vp-step-num">3</span> Componé el video</div>
+        <button class="btn btn-primary" id="vp-btn-generar" onclick="vpGenerar()" disabled>🎬 Generar video compuesto</button>
+        <div id="vp-job-status"></div>
+      </div>
+
+      <!-- Paso 4: publicar / revertir -->
+      <div class="vp-step" id="vp-step-4" style="display:none;">
+        <div class="vp-step-title"><span class="vp-step-num">4</span> Publicá en una pantalla</div>
+        <div class="field">
+          <label>Pantalla</label>
+          <select id="vp-screen-select">
+            <option value="">Cargando pantallas...</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="vp-btn-publicar" onclick="vpPublicar()">🟢 Publicar</button>
+      </div>
+
+      <!-- Historial reciente -->
+      <div class="vp-step" id="vp-step-historial">
+        <div class="vp-step-title">Jobs recientes</div>
+        <div id="vp-jobs-recent" class="vp-clip-list">
+          <div class="loading-center"><div class="spinner"></div> Cargando...</div>
+        </div>
+      </div>
+    </div><!-- /tab-videoprioritario -->
+
+  </div><!-- /app-content -->
+
+</div><!-- /screen-app -->
+
+<!-- ─── MODAL ───────────────────────────────────────────────── -->
+<div id="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div id="modal-box">
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- ─── PLAYLIST EDITOR ─────────────────────────────────────── -->
+<div id="pl-editor">
+  <div class="pl-editor-header">
+    <button class="btn btn-ghost btn-sm" onclick="closePlEditor()">← Volver</button>
+    <div class="pl-editor-title" id="pl-editor-title">Editando playlist</div>
+    <button class="btn btn-primary btn-sm" onclick="savePlEditor()">Guardar</button>
+  </div>
+  <div class="pl-editor-body" id="pl-editor-body"></div>
+</div>
+
+<!-- ─── QR SCANNER MODAL ────────────────────────────────────── -->
+<div class="qr-modal-backdrop" id="scanner-modal">
+  <div class="qr-modal-box">
+    <div class="qr-modal-title">📷 Escanear pantalla</div>
+    <div class="qr-modal-sub">Apuntá la cámara al QR que aparece en la TV</div>
+    <div class="scanner-overlay">
+      <video id="scanner-video" playsinline autoplay muted></video>
+      <div class="scanner-crosshair"></div>
+    </div>
+    <div class="scanner-status" id="scanner-status">Buscando QR…</div>
+    <div class="qr-modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeScanner()">✕ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NUEVO: LIGHTBOX DE CAPTURAS ────────────────────────────── -->
+<div class="captura-lightbox" id="captura-lightbox" onclick="closeLightbox()">
+  <button class="captura-lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="captura-lightbox-img" src="" alt="Captura ampliada">
+</div>
+
+<!-- ─── TOAST ───────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ─── JAVASCRIPT ──────────────────────────────────────────── -->
+<script src="js/00-core.js"></script>
+<script src="js/01-shell-navegacion.js"></script>
+<script src="js/02-pantallas.js"></script>
+<script src="js/03-capturas-video.js"></script>
+<script src="js/04-media.js"></script>
+<script src="js/05-playlists.js"></script>
+<script src="js/06-deploy-adb.js"></script>
+<script src="js/07-utils-registro-qr.js"></script>
+<script src="js/08-alertas-onesignal.js"></script>
+<script src="js/11-video-prioritario.js"></script>
+<script src="js/10-arrancar.js"></script>
+</body>
+</html>
