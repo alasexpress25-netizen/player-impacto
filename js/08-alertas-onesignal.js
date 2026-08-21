@@ -15,18 +15,19 @@ function initOneSignalSDK() {
     try {
       window.OneSignalDeferred.push(async function(OneSignal) {
         try {
-          // Detectar subcarpeta si estamos en GitHub Pages (/player-impacto/) o en la raíz
-          const isGitHubPages = window.location.pathname.includes('/player-impacto');
-          const swPath = isGitHubPages ? '/player-impacto/OneSignalSDKWorker.js' : 'OneSignalSDKWorker.js';
-          const swParam = isGitHubPages ? { scope: '/player-impacto/' } : undefined;
+          // Calculá la carpeta actual (ej: '/player-impacto/' en GitHub Pages,
+          // o '/' en player.alastecno.com) para que el scope del SW sea correcto
+          // sin necesidad de hardcodear el nombre del repo.
+          const basePath = window.location.pathname.endsWith('/')
+            ? window.location.pathname
+            : window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
 
           await OneSignal.init({
             appId: ONESIGNAL_APP_ID,
             notifyButton: { enable: false },
             allowLocalhostAsSecureOrigin: true,
-            serviceWorkerPath: swPath,
-            serviceWorkerParam: swParam,
-            path: swPath,
+            serviceWorkerPath: 'OneSignalSDKWorker.js',
+            serviceWorkerParam: { scope: basePath },
           });
           oneSignalInstance = OneSignal;
           oneSignalInitError = null;
@@ -67,7 +68,7 @@ if ('serviceWorker' in navigator) {
 async function getOneSignal() {
   const res = await initOneSignalSDK();
   if (res.error || !res.instance) {
-    throw new Error(res.error?.message || 'OneSignal sólo está disponible en https://alasexpress25-netizen.github.io/player-impacto/');
+    throw new Error(res.error?.message || 'OneSignal sólo está disponible en https://player.alastecno.com');
   }
   return res.instance;
 }
@@ -332,4 +333,3 @@ async function loadAlertLog() {
     </div>`;
   }).join('');
 }
-
