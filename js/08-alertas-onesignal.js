@@ -64,6 +64,35 @@ async function getOneSignal() {
   return res.instance;
 }
 
+async function getPlayerId(os) {
+  if (!os) return null;
+  const getSub = () => os.User?.PushSubscription || os.User?.pushSubscription;
+  let sub = getSub();
+  let id = sub?.id;
+  if (id) return id;
+
+  // Si recién se dio permiso, el ID puede tardar 1-2 segundos en generarse
+  for (let i = 0; i < 8; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    sub = getSub();
+    if (sub?.id) return sub.id;
+    if (typeof os.getUserId === 'function') {
+      const legacyId = await os.getUserId();
+      if (legacyId) return legacyId;
+    }
+  }
+
+  // Intento de forzar optIn si estaba pendiente
+  if (sub && typeof sub.optIn === 'function' && !sub.optedIn) {
+    try { await sub.optIn(); } catch(e) {}
+    await new Promise(r => setTimeout(r, 800));
+    sub = getSub();
+    if (sub?.id) return sub.id;
+  }
+
+  return sub?.id || null;
+}
+
 // ════════════════════════════════════════════════════════════════
 //  TAB ALERTAS
 // ════════════════════════════════════════════════════════════════
@@ -80,14 +109,30 @@ async function renderDeviceCard() {
 
   try {
     const os = await getOneSignal();
-    const permission = await os.Notifications.permission;
-    const isSubscribed = await os.User.PushSubscription.optedIn;
+    const permission = await os.Notifications?.permission;
+    const sub = os.User?.PushSubscription || os.User?.pushSubscription;
+    const isSubscribed = Boolean(sub?.optedIn);
 
     if (!permission || !isSubscribed) {
       statusEl.textContent = '⚠️ Sin suscripción activa';
       actionEl.innerHTML = `<button class="btn btn-primary btn-sm" onclick="suscribirDispositivo()">🔔 Activar notificaciones</button>`;
     } else {
-      const playerId = os.User.PushSubscription.id;
+      const playerId = await getPlayerId(os);
+
+      if (!playerId) {
+        statusEl.textContent = '⏳ Conectando con OneSignal...';
+        actionEl.innerHTML = `<button class="btn btn-outline btn-sm" onclick="registrarEnDB()">🔄 Reintentar registro</button>`;
+        // Auto-reintento en segundo plano
+        setTimeout(() => {
+          getPlayerId(os).then((id) => {
+            if (id) {
+              registrarEnDB();
+            }
+          });
+        }, 1500);
+        return;
+      }
+
       const { data } = await sb.from('admin_suscriptores')
         .select('id, activo')
         .eq('onesignal_player_id', playerId)
@@ -114,8 +159,12 @@ async function suscribirDispositivo() {
   try {
     const os = await getOneSignal();
     await os.Notifications.requestPermission();
-    const optedIn = await os.User.PushSubscription.optedIn;
-    if (!optedIn) { toast('No se otorgó permiso de notificaciones', 'error'); return; }
+    const sub = os.User?.PushSubscription || os.User?.pushSubscription;
+    const optedIn = sub?.optedIn;
+    if (!optedIn && typeof sub?.optIn === 'function') {
+      await sub.optIn();
+    }
+    toast('Generando suscripción...', 'info');
     await registrarEnDB();
     renderDeviceCard();
     loadSubsList();
@@ -127,8 +176,11 @@ async function suscribirDispositivo() {
 async function registrarEnDB() {
   try {
     const os = await getOneSignal();
-    const playerId = os.User.PushSubscription.id;
-    if (!playerId) { toast('No se pudo obtener el Player ID', 'error'); return; }
+    const playerId = await getPlayerId(os);
+    if (!playerId) { 
+      toast('OneSignal está sincronizando el identificador, aguarda 2 segundos y reintenta', 'error'); 
+      return; 
+    }
 
     const { error } = await sb.from('admin_suscriptores')
       .upsert({ onesignal_player_id: playerId, activo: true }, { onConflict: 'onesignal_player_id' });
