@@ -6,7 +6,7 @@ let sb            = null;   // Supabase client
 // edge function r2-media (Supabase), que firma URLs de R2 con AWS v4.
 const R2_MEDIA_FN   = 'https://sdfwredxmyawvolxuifp.supabase.co/functions/v1/r2-media';
 const R2_UPLOAD_TOKEN = '_7xnYoKahXsioGuQ2ClleJ_vFbj6B9XNIsGJRuk2LuA';
-const COMPROBANTE_BASE_URL = 'https://alasexpress25-netizen.github.io/player-impacto/publicidade/comprobante.html'; // el comprobante ahora vive en /publicidade dentro del mismo repo (GitHub Pages)
+const COMPROBANTE_BASE_URL = 'https://publicidade.alastecno.com/comprobante.html'; // el comprobante ahora vive en /publicidade dentro del mismo repo (GitHub Pages)
 let currentTab    = 'dashboard';
 let allMedia      = [];     // cache local para el editor de playlist
 let allClientes     = [];   // cache local de clientes/anunciantes
