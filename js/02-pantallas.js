@@ -162,11 +162,14 @@ async function updateWatchdog(screenId, activo) {
 // ════════════════════════════════════════════════════════════════
 async function showEditScreenModal(id, nombre, ciudad, grupo, playlistId) {
   // Cargar playlists, clientes y las asignaciones actuales (cliente_pantallas) en paralelo
-  const [{ data: pls }, { data: clientesData }, { data: asignaciones }] = await Promise.all([
+  const [{ data: pls }, { data: clientesData }, { data: asignaciones }, { data: screenRow }] = await Promise.all([
     sb.from('playlists').select('id, nombre, grupo_base').eq('activa', true).order('nombre'),
     sb.from('clientes').select('id, nombre, empresa, activo').order('nombre'),
-    sb.from('cliente_pantallas').select('cliente_id').eq('screen_id', id)
+    sb.from('cliente_pantallas').select('cliente_id').eq('screen_id', id),
+    sb.from('screens').select('orientacion').eq('id', id).single()
   ]);
+
+  const orientacion = screenRow?.orientacion || 'horizontal';
 
   const opts = (pls || []).map(p =>
     `<option value="${p.id}" ${p.id === playlistId ? 'selected' : ''}>${esc(p.nombre)} (${p.grupo_base})</option>`
@@ -205,6 +208,13 @@ async function showEditScreenModal(id, nombre, ciudad, grupo, playlistId) {
     <select id="m-sc-playlist">
       <option value="">— Sin playlist —</option>
       ${opts}
+    </select>
+  </div>
+  <div class="field">
+    <label>Orientación de la pantalla</label>
+    <select id="m-sc-orientacion">
+      <option value="horizontal" ${orientacion==='horizontal'?'selected':''}>🖥️ Horizontal (16:9)</option>
+      <option value="vertical" ${orientacion==='vertical'?'selected':''}>📱 Vertical (9:16)</option>
     </select>
   </div>
   <div class="field">
@@ -251,9 +261,10 @@ async function saveScreen(id) {
   const ciudad     = document.getElementById('m-sc-city').value.trim();
   const grupo_base = document.getElementById('m-sc-grupo').value;
   const playlist_id = document.getElementById('m-sc-playlist').value || null;
+  const orientacion = document.getElementById('m-sc-orientacion').value;
   const clienteIds  = Array.from(document.querySelectorAll('.m-sc-cliente-chk:checked')).map(chk => chk.value);
 
-  const { error } = await sb.from('screens').update({ nombre, ciudad, grupo_base, playlist_id }).eq('id', id);
+  const { error } = await sb.from('screens').update({ nombre, ciudad, grupo_base, playlist_id, orientacion }).eq('id', id);
   if (error) { toast('Error al guardar: ' + error.message, 'error'); return; }
 
   // Sincronizar cliente_pantallas: se borran todas las asignaciones anteriores de
