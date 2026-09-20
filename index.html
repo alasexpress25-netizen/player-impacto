@@ -135,6 +135,13 @@
         </svg>
         <span class="side-graphic-label">Alertas</span>
       </button>
+      <button class="side-graphic-tile" data-tab="horarios" onclick="setActiveTab('horarios')" title="Horarios">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"></circle>
+          <polyline points="12 7 12 12 16 14"></polyline>
+        </svg>
+        <span class="side-graphic-label">Horarios</span>
+      </button>
       <button class="side-graphic-tile" data-tab="capturas" onclick="setActiveTab('capturas')" title="Capturas">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 8h2.5L8 5.5h8L17.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path>
@@ -317,6 +324,20 @@
 
 
 
+    <!-- ── Tab: Horarios ──────────────────────────────────── -->
+    <div id="tab-horarios" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🕐 Horarios</div>
+          <div class="section-sub">Franjas de encendido/apagado por pantalla — usadas por el watchdog de señal para saber cuándo alertar</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadHorarios()">↻ Actualizar</button>
+      </div>
+      <div id="horarios-screens-list">
+        <div class="loading-center"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div><!-- /tab-horarios -->
+
     <!-- ── Tab: Capturas ─────────────────────────────────────── -->
     <div id="tab-capturas" class="tab-panel">
       <div class="section-header">
@@ -467,6 +488,7 @@
 <script src="js/06-deploy-adb.js"></script>
 <script src="js/07-utils-registro-qr.js"></script>
 <script src="js/08-alertas-onesignal.js"></script>
+<script src="js/09-horarios.js"></script>
 <script src="js/11-video-prioritario.js"></script>
 <script src="js/10-arrancar.js"></script>
 </body>
