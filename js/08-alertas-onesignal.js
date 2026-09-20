@@ -1,7 +1,7 @@
 // ════════════════════════════════════════════════════════════════
 //  ONESIGNAL — INIT
 // ════════════════════════════════════════════════════════════════
-const ONESIGNAL_APP_ID = 'af9a2188-149d-4c2b-8732-3737510b6e70';
+const ONESIGNAL_APP_ID = '9077c3f8-1be5-4619-a34f-75f64d462556';
 let oneSignalInstance = null;
 let oneSignalInitError = null;
 let oneSignalInitPromise = null;
