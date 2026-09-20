@@ -66,6 +66,7 @@ async function setActiveTab(tab) {
   if (tab === 'media')     loadMedia();
   if (tab === 'playlists') loadPlaylists();
   if (tab === 'alertas')   loadAlertas();
+  if (tab === 'horarios')  loadHorarios();
   if (tab === 'capturas')  loadCapturas();
   if (tab === 'videovivo') loadVideoVivo();
   if (tab === 'videoprioritario') loadVideoPrioritario();
