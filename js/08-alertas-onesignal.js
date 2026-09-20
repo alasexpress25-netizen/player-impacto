@@ -273,6 +273,9 @@ async function loadSubsList() {
 
 // ════════════════════════════════════════════════════════════════
 //  FIX: loadAlertLog — filtra solo pantallas activas + muestra nombre real
+//  ✅ CAMBIO (2026-09-20): agrega botón "Marcar como atendida" para
+//  pantallas offline sin atender — corta los reintentos de push cada
+//  5 min que manda monitor-screens hasta que alguien la marca.
 // ════════════════════════════════════════════════════════════════
 async function loadAlertLog() {
   const el = document.getElementById('alertas-log-list');
@@ -284,7 +287,7 @@ async function loadAlertLog() {
 
   // 2. Traer el cache — pedimos más registros para compensar el filtrado
   const { data, error } = await sb.from('screen_status_cache')
-    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online')
+    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online, ack_offline')
     .order('last_checked', { ascending: false })
     .limit(50);
 
@@ -320,6 +323,19 @@ async function loadAlertLog() {
     const lastOffAlert = r.last_alert_offline ? timeAgo(r.last_alert_offline) : 'nunca';
     const lastOnAlert  = r.last_alert_online  ? timeAgo(r.last_alert_online)  : 'nunca';
 
+    // Mientras esté offline y sin atender, el backend reintenta el push
+    // cada 5 min. Este botón corta esos reintentos para este corte puntual.
+    let ackRow = '';
+    if (!r.was_online) {
+      ackRow = r.ack_offline
+        ? `<div class="card-meta" style="margin-top:6px;">
+             <span class="badge badge-gray">🔕 Atendida — sin reintentos de push</span>
+           </div>`
+        : `<div class="card-meta" style="margin-top:8px;">
+             <button class="btn btn-outline btn-sm" onclick="ackOffline('${r.screen_uuid}')">✅ Marcar como atendida</button>
+           </div>`;
+    }
+
     return `
     <div class="card" style="margin-bottom:8px;">
       <div class="card-header">
@@ -333,6 +349,20 @@ async function loadAlertLog() {
         <span>📴 Alerta offline: ${lastOffAlert}</span>
         <span>📶 Alerta online: ${lastOnAlert}</span>
       </div>
+      ${ackRow}
     </div>`;
   }).join('');
+}
+
+// Marca el corte actual como "atendido": monitor-screens deja de reenviar
+// el push cada 5 min para esta pantalla hasta el próximo corte (cuando
+// reconecte, el backend resetea ack_offline automáticamente).
+async function ackOffline(screenUuid) {
+  const { error } = await sb.from('screen_status_cache')
+    .update({ ack_offline: true })
+    .eq('screen_uuid', screenUuid);
+
+  if (error) { toast('Error al marcar como atendida: ' + error.message, 'error'); return; }
+  toast('✅ Marcada como atendida — no más reintentos de push', 'success');
+  loadAlertLog();
 }
