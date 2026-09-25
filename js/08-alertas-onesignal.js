@@ -276,6 +276,9 @@ async function loadSubsList() {
 //  ✅ CAMBIO (2026-09-20): agrega botón "Marcar como atendida" para
 //  pantallas offline sin atender — corta los reintentos de push cada
 //  5 min que manda monitor-screens hasta que alguien la marca.
+//  ✅ CAMBIO (2026-09-22): mismo botón pero para el caso inverso — la
+//  pantalla sigue "En línea" después de su horario de cierre (no se
+//  apagó). También corta reintentos hasta marcarla atendida.
 // ════════════════════════════════════════════════════════════════
 async function loadAlertLog() {
   const el = document.getElementById('alertas-log-list');
@@ -287,7 +290,7 @@ async function loadAlertLog() {
 
   // 2. Traer el cache — pedimos más registros para compensar el filtrado
   const { data, error } = await sb.from('screen_status_cache')
-    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online, ack_offline')
+    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online, ack_offline, was_after_hours, last_alert_after_hours, ack_after_hours')
     .order('last_checked', { ascending: false })
     .limit(50);
 
@@ -336,6 +339,21 @@ async function loadAlertLog() {
            </div>`;
     }
 
+    // Mientras siga online fuera de horario y sin atender, mismo esquema
+    // de reintento cada 5 min. Este botón corta esos reintentos.
+    let afterHoursRow = '';
+    if (r.was_after_hours) {
+      const lastAH = r.last_alert_after_hours ? timeAgo(r.last_alert_after_hours) : 'nunca';
+      afterHoursRow = r.ack_after_hours
+        ? `<div class="card-meta" style="margin-top:6px;">
+             <span class="badge badge-gray">🔕 No se apagó tras el cierre — atendida, sin reintentos</span>
+           </div>`
+        : `<div class="card-meta" style="margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+             <span class="badge badge-red">⚠️ No se apagó tras el cierre (últ. aviso: ${lastAH})</span>
+             <button class="btn btn-outline btn-sm" onclick="ackAfterHours('${r.screen_uuid}')">✅ Marcar como atendida</button>
+           </div>`;
+    }
+
     return `
     <div class="card" style="margin-bottom:8px;">
       <div class="card-header">
@@ -350,6 +368,7 @@ async function loadAlertLog() {
         <span>📶 Alerta online: ${lastOnAlert}</span>
       </div>
       ${ackRow}
+      ${afterHoursRow}
     </div>`;
   }).join('');
 }
@@ -360,6 +379,19 @@ async function loadAlertLog() {
 async function ackOffline(screenUuid) {
   const { error } = await sb.from('screen_status_cache')
     .update({ ack_offline: true })
+    .eq('screen_uuid', screenUuid);
+
+  if (error) { toast('Error al marcar como atendida: ' + error.message, 'error'); return; }
+  toast('✅ Marcada como atendida — no más reintentos de push', 'success');
+  loadAlertLog();
+}
+
+// Marca "no se apagó tras el cierre" como atendido: corta los reintentos
+// cada 5 min para esta pantalla hasta que se apague o vuelva a entrar en
+// horario activo (el backend resetea ack_after_hours automáticamente).
+async function ackAfterHours(screenUuid) {
+  const { error } = await sb.from('screen_status_cache')
+    .update({ ack_after_hours: true })
     .eq('screen_uuid', screenUuid);
 
   if (error) { toast('Error al marcar como atendida: ' + error.message, 'error'); return; }
