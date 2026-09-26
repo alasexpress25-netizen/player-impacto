@@ -279,7 +279,13 @@ async function loadSubsList() {
 //  ✅ CAMBIO (2026-09-22): mismo botón pero para el caso inverso — la
 //  pantalla sigue "En línea" después de su horario de cierre (no se
 //  apagó). También corta reintentos hasta marcarla atendida.
+//  ✅ CAMBIO (2026-09-26): "atendida" ya no es un silencio para siempre —
+//  ahora es un snooze de 1 hora (ack_offline_until / ack_after_hours_until).
+//  Pasada esa hora, si el problema sigue igual, el backend vuelve a
+//  insistir solo, sin que haga falta tocar nada de nuevo.
 // ════════════════════════════════════════════════════════════════
+const SNOOZE_MS = 60 * 60 * 1000; // 1 hora
+
 async function loadAlertLog() {
   const el = document.getElementById('alertas-log-list');
   if (!el) return;
@@ -290,7 +296,7 @@ async function loadAlertLog() {
 
   // 2. Traer el cache — pedimos más registros para compensar el filtrado
   const { data, error } = await sb.from('screen_status_cache')
-    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online, ack_offline, was_after_hours, last_alert_after_hours, ack_after_hours')
+    .select('screen_uuid, was_online, last_checked, last_alert_offline, last_alert_online, ack_offline_until, was_after_hours, last_alert_after_hours, ack_after_hours_until')
     .order('last_checked', { ascending: false })
     .limit(50);
 
@@ -315,6 +321,8 @@ async function loadAlertLog() {
     return;
   }
 
+  const now = Date.now();
+
   el.innerHTML = filtered.map(r => {
     const screen = activeScreenMap.get(r.screen_uuid);
     const nombre = screen?.nombre || r.screen_uuid?.slice(0, 12) + '...';
@@ -326,31 +334,34 @@ async function loadAlertLog() {
     const lastOffAlert = r.last_alert_offline ? timeAgo(r.last_alert_offline) : 'nunca';
     const lastOnAlert  = r.last_alert_online  ? timeAgo(r.last_alert_online)  : 'nunca';
 
-    // Mientras esté offline y sin atender, el backend reintenta el push
-    // cada 5 min. Este botón corta esos reintentos para este corte puntual.
+    // Mientras esté offline y no esté en snooze, el backend reintenta el
+    // push cada 5 min. Este botón pausa esos reintentos por 1 hora.
     let ackRow = '';
     if (!r.was_online) {
-      ackRow = r.ack_offline
+      const snoozedUntil = r.ack_offline_until ? new Date(r.ack_offline_until).getTime() : 0;
+      const enSnooze = now < snoozedUntil;
+      ackRow = enSnooze
         ? `<div class="card-meta" style="margin-top:6px;">
-             <span class="badge badge-gray">🔕 Atendida — sin reintentos de push</span>
+             <span class="badge badge-gray">🔕 Atendida hasta las ${formatHora(snoozedUntil)} — sin reintentos</span>
            </div>`
         : `<div class="card-meta" style="margin-top:8px;">
-             <button class="btn btn-outline btn-sm" onclick="ackOffline('${r.screen_uuid}')">✅ Marcar como atendida</button>
+             <button class="btn btn-outline btn-sm" onclick="ackOffline('${r.screen_uuid}')">✅ Marcar como atendida (1h)</button>
            </div>`;
     }
 
-    // Mientras siga online fuera de horario y sin atender, mismo esquema
-    // de reintento cada 5 min. Este botón corta esos reintentos.
+    // Mismo esquema de snooze para "sigue online fuera de horario".
     let afterHoursRow = '';
     if (r.was_after_hours) {
       const lastAH = r.last_alert_after_hours ? timeAgo(r.last_alert_after_hours) : 'nunca';
-      afterHoursRow = r.ack_after_hours
+      const snoozedUntilAH = r.ack_after_hours_until ? new Date(r.ack_after_hours_until).getTime() : 0;
+      const enSnoozeAH = now < snoozedUntilAH;
+      afterHoursRow = enSnoozeAH
         ? `<div class="card-meta" style="margin-top:6px;">
-             <span class="badge badge-gray">🔕 No se apagó tras el cierre — atendida, sin reintentos</span>
+             <span class="badge badge-gray">🔕 No se apagó tras el cierre — atendida hasta las ${formatHora(snoozedUntilAH)}</span>
            </div>`
         : `<div class="card-meta" style="margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
              <span class="badge badge-red">⚠️ No se apagó tras el cierre (últ. aviso: ${lastAH})</span>
-             <button class="btn btn-outline btn-sm" onclick="ackAfterHours('${r.screen_uuid}')">✅ Marcar como atendida</button>
+             <button class="btn btn-outline btn-sm" onclick="ackAfterHours('${r.screen_uuid}')">✅ Marcar como atendida (1h)</button>
            </div>`;
     }
 
@@ -373,28 +384,34 @@ async function loadAlertLog() {
   }).join('');
 }
 
-// Marca el corte actual como "atendido": monitor-screens deja de reenviar
-// el push cada 5 min para esta pantalla hasta el próximo corte (cuando
-// reconecte, el backend resetea ack_offline automáticamente).
+function formatHora(ts) {
+  return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Pausa los reintentos de push por 1 hora para el corte offline actual.
+// Si pasada esa hora la pantalla sigue offline, monitor-screens vuelve a
+// insistir solo (no hace falta volver a tocar nada). Se resetea también
+// cuando la pantalla reconecta, para el próximo corte.
 async function ackOffline(screenUuid) {
+  const until = new Date(Date.now() + SNOOZE_MS).toISOString();
   const { error } = await sb.from('screen_status_cache')
-    .update({ ack_offline: true })
+    .update({ ack_offline_until: until })
     .eq('screen_uuid', screenUuid);
 
   if (error) { toast('Error al marcar como atendida: ' + error.message, 'error'); return; }
-  toast('✅ Marcada como atendida — no más reintentos de push', 'success');
+  toast('✅ Pausado por 1 hora — si sigue igual, vuelve a avisar solo', 'success');
   loadAlertLog();
 }
 
-// Marca "no se apagó tras el cierre" como atendido: corta los reintentos
-// cada 5 min para esta pantalla hasta que se apague o vuelva a entrar en
-// horario activo (el backend resetea ack_after_hours automáticamente).
+// Pausa los reintentos de push por 1 hora para "no se apagó tras el
+// cierre". Si pasada esa hora sigue sin apagarse, vuelve a insistir solo.
 async function ackAfterHours(screenUuid) {
+  const until = new Date(Date.now() + SNOOZE_MS).toISOString();
   const { error } = await sb.from('screen_status_cache')
-    .update({ ack_after_hours: true })
+    .update({ ack_after_hours_until: until })
     .eq('screen_uuid', screenUuid);
 
   if (error) { toast('Error al marcar como atendida: ' + error.message, 'error'); return; }
-  toast('✅ Marcada como atendida — no más reintentos de push', 'success');
+  toast('✅ Pausado por 1 hora — si sigue igual, vuelve a avisar solo', 'success');
   loadAlertLog();
 }
