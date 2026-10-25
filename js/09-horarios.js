@@ -168,10 +168,12 @@ async function saveHorarioScreen(screenId) {
     return { horaOn, horaOff, dias };
   }).filter(f => f.horaOn && f.horaOff);
 
-  // Validación simple: cada franja debe tener apertura antes que cierre
+  // Validación: se permite que el cierre sea menor que la apertura (franja que
+  // cruza la medianoche, ej. 18:05–00:02, cierra al día siguiente). Lo único
+  // inválido es apertura == cierre, porque no define ninguna duración.
   for (const f of franjas) {
-    if (f.horaOn >= f.horaOff) {
-      toast(`⚠️ Horario inválido (${f.horaOn}–${f.horaOff}): la apertura debe ser antes del cierre`, 'error');
+    if (f.horaOn === f.horaOff) {
+      toast(`⚠️ Horario inválido (${f.horaOn}–${f.horaOff}): la apertura y el cierre no pueden ser iguales`, 'error');
       return;
     }
   }
