@@ -73,7 +73,7 @@ function closeLightbox() {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  VIDEO EN VIVO (reproducción independiente por pantalla)
+//  VIDEO EN VIVO (sigue el archivo que reporta la TV)
 // ════════════════════════════════════════════════════════════════
 let vivoPlayerTimer = null;
 
@@ -142,67 +142,100 @@ function renderVivoCard(id, nombre, ciudad, online, thumbUrl, tienePlaylist) {
   </div>`;
 }
 
+// Sigue el archivo que la TV reporta en screens.media_actual (se actualiza
+// en cada cambio de video). Se consulta cada 3s; vivoPlayerTimer se mantiene
+// con ese nombre porque closeModal() (07-utils) lo limpia al cerrar.
+let vivoArchivoActual = null;
+const vivoMediaCache = {};
+
 async function abrirVideoEnVivo(screenId, nombre) {
+  vivoArchivoActual = null;
   openModal(`
     <div class="modal-header">
       <div class="modal-title">▶ ${esc(nombre)}</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div id="vivo-stage" style="width:100%;aspect-ratio:9/16;max-height:70dvh;background:#000;border-radius:var(--r-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;">
+    <div id="vivo-stage" style="width:100%;aspect-ratio:16/9;max-height:70dvh;background:#000;border-radius:var(--r-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;">
       <div class="loading-center"><div class="spinner"></div></div>
     </div>
-    <div style="text-align:center;font-size:11px;color:var(--text2);margin-top:10px;line-height:1.5;">
-      Reproducción independiente con el mismo contenido y orden de la playlist activa — no es un espejo en vivo pixel a pixel, puede estar en un punto distinto del video.
+    <div style="text-align:center;margin-top:10px;font-size:12px;color:var(--text);">
+      <span class="vivo-live-dot"></span>&nbsp;Reproduciendo en la TV: <b id="vivo-now">—</b>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5;">
+      Muestra el archivo que la pantalla está ejecutando y cambia cuando la TV pasa al siguiente. Se sincroniza con el segundo en que la TV empezó el video; puede haber 1-2 s de diferencia.
     </div>
   `);
-
-  const stage = document.getElementById('vivo-stage');
-
-  const { data: screen, error: errScreen } = await sb
-    .from('screens')
-    .select('playlist_id')
-    .eq('id', screenId)
-    .single();
-
-  if (errScreen || !screen?.playlist_id) {
-    stage.innerHTML = `<div class="captura-empty">Esta pantalla no tiene una playlist asignada.</div>`;
-    return;
-  }
-
-  const { data: items, error: errItems } = await sb
-    .from('playlist_items')
-    .select('orden, media:media_id(tipo, url_storage, duracion)')
-    .eq('playlist_id', screen.playlist_id)
-    .eq('activo', true)
-    .order('orden', { ascending: true });
-
-  const activos = (items || []).filter(it => it.media && it.media.url_storage);
-
-  if (errItems || !activos.length) {
-    stage.innerHTML = `<div class="captura-empty">Sin contenido disponible para reproducir ahora.</div>`;
-    return;
-  }
-
-  iniciarLoopVivo(stage, activos, 0);
+  vivoSincronizar(screenId, document.getElementById('vivo-stage'));
 }
 
-function iniciarLoopVivo(stage, items, idx) {
+async function vivoBuscarMedia(nombreArchivo) {
+  if (vivoMediaCache[nombreArchivo] !== undefined) return vivoMediaCache[nombreArchivo];
+  const { data } = await sb.from('media')
+    .select('id, tipo, url_storage, duracion')
+    .eq('nombre', nombreArchivo)
+    .limit(1);
+  const m = (data && data[0] && data[0].url_storage) ? data[0] : null;
+  vivoMediaCache[nombreArchivo] = m;
+  return m;
+}
+
+// Hora en que la TV empezó este archivo (último play_log de esa pantalla y media).
+// Si no se puede leer (RLS, sin registro), devuelve null y el video arranca en 0.
+async function vivoInicioReproduccion(screenId, mediaId) {
+  try {
+    const { data, error } = await sb.from('play_log')
+      .select('played_at')
+      .eq('screen_id', screenId)
+      .eq('media_id', mediaId)
+      .order('played_at', { ascending: false })
+      .limit(1);
+    if (error || !data || !data[0]) return null;
+    return new Date(data[0].played_at).getTime();
+  } catch (e) { return null; }
+}
+
+async function vivoSincronizar(screenId, stage) {
   clearTimeout(vivoPlayerTimer);
-  if (!document.getElementById('modal-overlay').classList.contains('active')) return;
+  const overlay = document.getElementById('modal-overlay');
+  if (!overlay || !overlay.classList.contains('active') || !stage || !stage.isConnected) return;
 
-  const item = items[idx % items.length];
-  const m = item.media;
-  const next = () => iniciarLoopVivo(stage, items, idx + 1);
+  try {
+    const { data: sc, error } = await sb.from('screens')
+      .select('media_actual, orientacion')
+      .eq('id', screenId)
+      .single();
+    if (error) throw error;
 
-  if (m.tipo === 'imagen') {
-    stage.innerHTML = `<img src="${esc(m.url_storage)}" style="width:100%;height:100%;object-fit:contain;">`;
-    vivoPlayerTimer = setTimeout(next, (m.duracion || 10) * 1000);
-  } else {
-    stage.innerHTML = `<video autoplay muted playsinline style="width:100%;height:100%;object-fit:contain;" src="${esc(m.url_storage)}"></video>`;
-    const v = stage.querySelector('video');
-    v.onended = next;
-    v.onerror = next;
+    stage.style.aspectRatio = sc.orientacion === 'vertical' ? '9/16' : '16/9';
+    const archivo = sc.media_actual || null;
+    const label = document.getElementById('vivo-now');
+    if (label) label.textContent = archivo || '—';
+
+    if (archivo !== vivoArchivoActual) {
+      vivoArchivoActual = archivo;
+      const m = archivo ? await vivoBuscarMedia(archivo) : null;
+      if (!m) {
+        stage.innerHTML = `<div class="captura-empty">${archivo ? 'La pantalla reporta "' + esc(archivo) + '", que no es un archivo de la biblioteca.' : 'La pantalla no reporta ningún archivo todavía.'}</div>`;
+      } else if (m.tipo === 'imagen') {
+        stage.innerHTML = `<img src="${esc(m.url_storage)}" style="width:100%;height:100%;object-fit:contain;">`;
+      } else {
+        const inicio = await vivoInicioReproduccion(screenId, m.id);
+        stage.innerHTML = `<video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:contain;" src="${esc(m.url_storage)}"></video>`;
+        const v = stage.querySelector('video');
+        // Salta al segundo en que va la TV. El cálculo se hace al cargar el
+        // video (no antes) para descontar lo que tarda en descargarse.
+        // Si el registro es más viejo que el video (TV trabada) no se salta.
+        if (inicio && v) {
+          v.addEventListener('loadedmetadata', () => {
+            const seg = (Date.now() - inicio) / 1000;
+            if (seg > 0 && v.duration && seg < v.duration) v.currentTime = seg;
+          }, { once: true });
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('vivoSincronizar:', e);
   }
+
+  vivoPlayerTimer = setTimeout(() => vivoSincronizar(screenId, stage), 3000);
 }
-
-
