@@ -20,6 +20,18 @@ async function loadScreenVpJobMap() {
   });
 }
 
+// playlist_id -> { seg, sinDur } con la duración total de una vuelta
+// (usa plLoopSeconds/fmtDur de js/05-playlists.js, que se cargan antes de ejecutar esto).
+let playlistLoopMap = {};
+async function loadPlaylistLoopMap() {
+  playlistLoopMap = {};
+  const { data } = await sb.from('playlists')
+    .select('id, playlist_items(activo, media:media_id(tipo, duracion))');
+  (data || []).forEach(pl => {
+    playlistLoopMap[pl.id] = plLoopSeconds((pl.playlist_items || []).filter(i => i.activo));
+  });
+}
+
 async function loadScreenClienteMap() {
   screenClienteMap = {};
   const { data: asignaciones } = await sb.from('cliente_pantallas').select('screen_id, cliente_id');
@@ -44,7 +56,8 @@ async function loadDashboard() {
   const [{ data, error }] = await Promise.all([
     sb.rpc('get_dashboard_status'),
     loadScreenClienteMap(),
-    loadScreenVpJobMap()
+    loadScreenVpJobMap(),
+    loadPlaylistLoopMap()
   ]);
 
   if (error) {
@@ -80,6 +93,9 @@ function renderScreenCard(sc) {
   const hb       = sc.last_heartbeat ? timeAgo(sc.last_heartbeat) : 'Nunca';
   const ciudad   = sc.ciudad || '—';
   const playNom  = sc.playlist_nombre || '—';
+  const loopInfo = sc.playlist_id ? playlistLoopMap[sc.playlist_id] : null;
+  const playDur  = loopInfo && loopInfo.seg > 0
+    ? ` · ⏱ ${fmtDur(loopInfo.seg)}${loopInfo.sinDur ? '+' : ''}` : '';
   const media    = sc.media_actual || '—';
   const ip       = sc.ip_address || '—';
   const storage  = sc.playlist_version || 'Calculando...';
@@ -130,7 +146,7 @@ function renderScreenCard(sc) {
     </div>
     <div class="card-meta">
       <span>🕐 ${hb}</span>
-      <span>📋 ${esc(playNom)}</span>
+      <span title="Duración total de una vuelta de la playlist">📋 ${esc(playNom)}${playDur}</span>
       <span>▶️ ${esc(media)}</span>
       <span>🌐 ${esc(ip)}</span>
       ${clienteChip}
@@ -402,4 +418,3 @@ async function sendRemoteMessage(id) {
   if (error) { toast('Error al enviar mensaje: ' + error.message, 'error'); return; }
   toast('Mensaje enviado ✓', 'success');
 }
-
