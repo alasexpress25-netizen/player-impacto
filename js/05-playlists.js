@@ -1,13 +1,45 @@
 // ════════════════════════════════════════════════════════════════
 //  PLAYLISTS
 // ════════════════════════════════════════════════════════════════
+// ─── Duración total de la "vuelta" de una playlist ─────────────
+// Imágenes: usan media.duracion (si falta, 10s, igual que el editor).
+// Videos: usan media.duracion; si no la tienen no se pueden sumar y se
+// cuentan aparte (sinDur) para avisar que el total es parcial.
+function fmtDur(seg) {
+  seg = Math.round(seg || 0);
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const s = seg % 60;
+  if (h) return `${h}h ${String(m).padStart(2, '0')}min`;
+  if (m) return `${m}min ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
+function plLoopSeconds(items) {
+  let seg = 0, sinDur = 0;
+  (items || []).forEach(it => {
+    const m = it.media;
+    if (!m) return;
+    const d = Number(m.duracion) || 0;
+    if (m.tipo === 'imagen') seg += d || 10;
+    else if (d > 0) seg += d;
+    else sinDur++;
+  });
+  return { seg, sinDur };
+}
+
+function plTotalLabel(items) {
+  const { seg, sinDur } = plLoopSeconds(items);
+  return `⏱ ${fmtDur(seg)}${sinDur ? ` (+${sinDur} sin duración)` : ''}`;
+}
+
 async function loadPlaylists() {
   const list = document.getElementById('playlists-list');
   list.innerHTML = '<div class="loading-center"><div class="spinner"></div> Cargando...</div>';
 
   const { data, error } = await sb
     .from('playlists')
-    .select('id, nombre, grupo_base, loop_continuo, activa, updated_at, playlist_items(count)')
+    .select('id, nombre, grupo_base, loop_continuo, activa, updated_at, playlist_items(activo, media:media_id(tipo, duracion))')
     .eq('activa', true)
     .order('nombre');
 
@@ -28,13 +60,14 @@ async function loadPlaylists() {
   }
 
   list.innerHTML = allPlaylists.map(pl => {
-    const count = pl.playlist_items?.[0]?.count ?? 0;
+    const activos = (pl.playlist_items || []).filter(i => i.activo);
+    const count = activos.length;
     return `
     <div class="card">
       <div class="card-header">
         <div>
           <div class="card-title">${esc(pl.nombre)}</div>
-          <div class="card-sub">${count} ítems · Grupo ${pl.grupo_base || '?'} · ${pl.loop_continuo ? 'Loop' : 'Sin loop'}</div>
+          <div class="card-sub">${count} ítems · ${plTotalLabel(activos)} por vuelta · Grupo ${pl.grupo_base || '?'} · ${pl.loop_continuo ? 'Loop' : 'Sin loop'}</div>
         </div>
         <div class="card-actions">
           <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="openPlEditor('${pl.id}')">✏️</button>
@@ -196,8 +229,11 @@ function renderPlEditor(pl) {
     </div>
 
     <div style="font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-      <span>📋 Contenido (${editingPlItems.length} ítems)</span>
+      <span id="pl-content-title">📋 Contenido (${editingPlItems.length} ítems)</span>
       <span style="font-size:11px;color:var(--text2);font-weight:400">Duración editable para imágenes</span>
+    </div>
+    <div id="pl-total-info" style="font-size:13px;color:var(--text2);margin:-4px 0 10px;">
+      ${plTotalLabel(editingPlItems)} <span style="font-size:11px">· tiempo total de una vuelta completa</span>
     </div>
     <div class="playlist-items-list" id="pl-items-list">${itemsHtml}</div>
 
@@ -298,9 +334,19 @@ async function moveItem(itemId, direction) {
   if (listEl) listEl.innerHTML = editingPlItems.map((item, i) => renderPlItem(item, i)).join('');
 }
 
+function refreshPlTotals() {
+  const t = document.getElementById('pl-content-title');
+  if (t) t.textContent = `📋 Contenido (${editingPlItems.length} ítems)`;
+  const info = document.getElementById('pl-total-info');
+  if (info) info.innerHTML = `${plTotalLabel(editingPlItems)} <span style="font-size:11px">· tiempo total de una vuelta completa</span>`;
+}
+
 async function updateItemDuration(itemId, mediaId, value) {
   const dur = Math.max(1, Math.min(300, parseInt(value) || 10));
   await sb.from('media').update({ duracion: dur }).eq('id', mediaId);
+  // Mantener el total al día sin recargar
+  editingPlItems.forEach(i => { if (i.media?.id === mediaId) i.media.duracion = dur; });
+  refreshPlTotals();
 }
 
 async function reloadPlItems() {
@@ -323,6 +369,7 @@ async function reloadPlItems() {
   if (libEl) {
     libEl.innerHTML = allMedia.map(m => renderLibItem(m, inPlaylistIds.has(m.id))).join('');
   }
+  refreshPlTotals();
 }
 
 async function savePlEditor() {
@@ -370,4 +417,3 @@ function closePlEditor() {
   editingPlItems = [];
   loadPlaylists();
 }
-
