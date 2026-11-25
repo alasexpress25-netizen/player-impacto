@@ -16,20 +16,26 @@ async function loadHorarios() {
   await loadHorariosScreens();
 }
 
+// Duración de la vuelta de la playlist asignada a cada pantalla
+// (screen.id → { nombre, seg, sinDur }). La usa updateHorarioStats().
+let horarioLoops = {};
+
 async function loadHorariosScreens() {
   const list = document.getElementById('horarios-screens-list');
   if (!list) return;
   list.innerHTML = '<div class="loading-center"><div class="spinner"></div> Cargando...</div>';
 
-  const [{ data, error }, { data: schedulesData, error: errSch }, { data: statusData, error: errStatus }] = await Promise.all([
+  const [{ data, error }, { data: schedulesData, error: errSch }, { data: statusData, error: errStatus }, { data: plData, error: errPl }] = await Promise.all([
     sb.from('screens')
-      .select('id, uuid, nombre, ciudad, watchdog_activo, timezone')
+      .select('id, uuid, nombre, ciudad, watchdog_activo, timezone, playlist_id')
       .order('nombre'),
     sb.from('screen_schedules')
       .select('id, screen_id, hora_apertura, hora_cierre, dias_activos')
       .order('hora_apertura'),
     sb.from('screen_status_cache')
       .select('screen_uuid, was_online, last_checked'),
+    sb.from('playlists')
+      .select('id, nombre, playlist_items(activo, media:media_id(tipo, duracion))'),
   ]);
 
   if (error) {
@@ -39,6 +45,16 @@ async function loadHorariosScreens() {
 
   if (errSch)    console.warn('No se pudieron cargar los horarios:', errSch.message);
   if (errStatus) console.warn('No se pudo cargar el estado de señal:', errStatus.message);
+  if (errPl)     console.warn('No se pudieron cargar las playlists:', errPl.message);
+
+  // Vuelta de cada playlist → por pantalla (según screens.playlist_id)
+  const loopByPlaylist = {};
+  (plData || []).forEach(pl => {
+    const items = (pl.playlist_items || []).filter(i => i.activo);
+    loopByPlaylist[pl.id] = { nombre: pl.nombre, ...plLoopSeconds(items) };
+  });
+  horarioLoops = {};
+  data.forEach(sc => { horarioLoops[sc.id] = sc.playlist_id ? (loopByPlaylist[sc.playlist_id] || null) : null; });
 
   if (!data?.length) {
     list.innerHTML = `<div class="empty-state"><div class="empty-icon">📺</div><div class="empty-text">Sin pantallas registradas</div></div>`;
@@ -58,6 +74,8 @@ async function loadHorariosScreens() {
   list.innerHTML = data.map(sc =>
     renderHorarioScreenCard(sc, schedulesByScreen[sc.id] || [], signalByUuid[sc.uuid])
   ).join('');
+
+  data.forEach(sc => updateHorarioStats(sc.id));
 }
 
 const DIAS = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -70,7 +88,7 @@ function renderFranjaRow(screenId, rowId, franja) {
   const horaOff = (franja?.hora_cierre  || '21:00:00').slice(0,5);
   const diaChips = DIAS.map(d => `
     <span class="dia-chip ${diasActivos.includes(d) ? 'active' : ''}"
-          onclick="this.classList.toggle('active')">${DIAS_ES[d]}</span>
+          onclick="this.classList.toggle('active'); updateHorarioStats('${screenId}')">${DIAS_ES[d]}</span>
   `).join('');
 
   return `
@@ -78,11 +96,11 @@ function renderFranjaRow(screenId, rowId, franja) {
     <div class="energia-time-row">
       <div class="field">
         <label>🌅 Apertura</label>
-        <input type="time" class="franja-on" value="${horaOn}">
+        <input type="time" class="franja-on" value="${horaOn}" oninput="updateHorarioStats('${screenId}')">
       </div>
       <div class="field">
         <label>🌙 Cierre</label>
-        <input type="time" class="franja-off" value="${horaOff}">
+        <input type="time" class="franja-off" value="${horaOff}" oninput="updateHorarioStats('${screenId}')">
       </div>
     </div>
     <div class="dia-chips franja-dias">${diaChips}</div>
@@ -95,11 +113,71 @@ function addFranja(screenId) {
   if (!container) return;
   const rowId = 'n' + Date.now() + Math.floor(Math.random() * 1000);
   container.insertAdjacentHTML('beforeend', renderFranjaRow(screenId, rowId, null));
+  updateHorarioStats(screenId);
 }
 
 function removeFranja(screenId, rowId) {
   const row = document.getElementById(`franja-${screenId}-${rowId}`);
   if (row) row.remove();
+  updateHorarioStats(screenId);
+}
+
+// ─── Rotación estimada: cuántas veces se ve cada anuncio por día ──
+// Cada anuncio suena UNA vez por vuelta de la playlist (dure 20, 30 o
+// 50s), así que: veces/día = segundos encendida por día ÷ segundos de
+// la vuelta. Se calcula en vivo leyendo las franjas del formulario
+// (aunque todavía no estén guardadas). Una franja que cruza la
+// medianoche cuenta completa para el día en que abre.
+function updateHorarioStats(screenId) {
+  const el = document.getElementById(`hstats-${screenId}`);
+  if (!el) return;
+
+  const container = document.getElementById(`franjas-${screenId}`);
+  const rows = container ? Array.from(container.querySelectorAll('.franja-row')) : [];
+  const segPorDia = {};
+  rows.forEach(row => {
+    const on  = row.querySelector('.franja-on')?.value;
+    const off = row.querySelector('.franja-off')?.value;
+    if (!on || !off || on === off) return;
+    const [h1, m1] = on.split(':').map(Number);
+    const [h2, m2] = off.split(':').map(Number);
+    const min = ((h2 * 60 + m2) - (h1 * 60 + m1) + 1440) % 1440;
+    Array.from(row.querySelectorAll('.dia-chip.active')).forEach(chip => {
+      const d = Object.entries(DIAS_ES).find(([, v]) => v === chip.textContent.trim())?.[0];
+      if (d) segPorDia[d] = (segPorDia[d] || 0) + min * 60;
+    });
+  });
+
+  const valores = Object.values(segPorDia);
+  const loop = horarioLoops[screenId];
+  const st = 'font-size:12px;color:var(--text2);line-height:1.6;';
+
+  if (!valores.length) {
+    el.innerHTML = `<div style="${st}">📊 Sin días/horas activas — no se puede calcular la rotación.</div>`;
+    return;
+  }
+
+  const promSeg = valores.reduce((a, b) => a + b, 0) / valores.length;
+  const minSeg  = Math.min(...valores);
+  const maxSeg  = Math.max(...valores);
+  const encendida = `🕒 Encendida: <strong>${fmtDur(promSeg)}</strong> por día` +
+    (maxSeg - minSeg > 60 ? ` (entre ${fmtDur(minSeg)} y ${fmtDur(maxSeg)})` : '');
+
+  let rotacion;
+  if (!loop) {
+    rotacion = `🔁 Sin playlist asignada a esta pantalla.`;
+  } else if (loop.seg <= 0) {
+    rotacion = `🔁 La playlist "${esc(loop.nombre)}" no tiene duración calculable.`;
+  } else {
+    const prom = promSeg / loop.seg;
+    const rango = (maxSeg - minSeg > 60)
+      ? ` (entre ${Math.round(minSeg / loop.seg)} y ${Math.round(maxSeg / loop.seg)} según el día)` : '';
+    rotacion = `🔁 Vuelta de "${esc(loop.nombre)}": <strong>${fmtDur(loop.seg)}</strong>` +
+      ` · 📺 Cada anuncio se ve ≈ <strong>${Math.round(prom)} veces por día</strong>${rango}` +
+      (loop.sinDur ? ` <span style="color:var(--warning,#e0a800)">⚠️ ${loop.sinDur} video(s) sin duración: el cálculo es aproximado</span>` : '');
+  }
+
+  el.innerHTML = `<div style="${st}">${encendida}<br>${rotacion}</div>`;
 }
 
 function renderHorarioScreenCard(sc, franjas, signalInfo) {
@@ -134,6 +212,9 @@ function renderHorarioScreenCard(sc, franjas, signalInfo) {
     <div style="font-size:12px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;font-weight:500;">Horarios</div>
     <div class="franjas-container" id="franjas-${sc.id}">${franjasHtml}</div>
     <button class="btn btn-outline btn-sm" style="width:100%;margin-top:4px;" onclick="addFranja('${sc.id}')">+ Agregar horario</button>
+
+    <!-- Rotación estimada (se calcula en vivo con las franjas de arriba) -->
+    <div id="hstats-${sc.id}" style="margin-top:10px;padding:8px 10px;border:1px dashed var(--border);border-radius:8px;"></div>
 
     <!-- Watchdog toggle -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
