@@ -70,6 +70,7 @@ async function setActiveTab(tab) {
   if (tab === 'capturas')  loadCapturas();
   if (tab === 'videovivo') loadVideoVivo();
   if (tab === 'videoprioritario') loadVideoPrioritario();
+  if (tab === 'planes')   loadPlanes();
 
   // En móvil, cerramos el menú lateral tras elegir una sección para dejar
   // más espacio a la pantalla.
