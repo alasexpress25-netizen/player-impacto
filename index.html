@@ -166,6 +166,14 @@
         </svg>
         <span class="side-graphic-label">Video Prioritario</span>
       </button>
+      <button class="side-graphic-tile" data-tab="planes" onclick="setActiveTab('planes')" title="Planes y precios">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="5" width="19" height="14" rx="2"></rect>
+          <line x1="2.5" y1="10" x2="21.5" y2="10"></line>
+          <line x1="6" y1="15" x2="10" y2="15"></line>
+        </svg>
+        <span class="side-graphic-label">Planes</span>
+      </button>
       <button class="side-graphic-tile side-action-tile action-install" onclick="openDeployModal('install')" title="Instalar en TV">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="4" width="13" height="9" rx="1.4"></rect>
@@ -338,6 +346,23 @@
       </div>
     </div><!-- /tab-horarios -->
 
+    <!-- ── Tab: Planes ────────────────────────────────────── -->
+    <div id="tab-planes" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <div class="section-title">💳 Planes y precios</div>
+          <div class="section-sub">Lo que muestra publicidade.alastecno.com — el cobro real lo hace Mercado Pago con el link de cada plan</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="loadPlanes()">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="showPlanModal()">➕ Nuevo plan</button>
+        </div>
+      </div>
+      <div id="planes-list">
+        <div class="loading-center"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div><!-- /tab-planes -->
+
     <!-- ── Tab: Capturas ─────────────────────────────────────── -->
     <div id="tab-capturas" class="tab-panel">
       <div class="section-header">
@@ -490,6 +515,7 @@
 <script src="js/08-alertas-onesignal.js"></script>
 <script src="js/09-horarios.js"></script>
 <script src="js/11-video-prioritario.js"></script>
+<script src="js/12-planes.js"></script>
 <script src="js/10-arrancar.js"></script>
 </body>
 </html>
